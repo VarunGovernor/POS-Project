@@ -9,7 +9,7 @@ from app.core.logging import configure_logging
 from app.core.request_id import RequestIdMiddleware
 from app.core.responses import error_response
 from app.auth.router import router as auth_router
-from app.billing.router import router as billing_router
+from app.billing.router import bills_router, receipts_router, router as billing_router, sync_router
 from app.catalog.router import router as catalog_router
 from app.database.connection import initialize_database
 from app.device.router import router as device_router
@@ -37,12 +37,15 @@ app.add_middleware(RequestIdMiddleware)
 api_prefix = "/api/v1"
 app.include_router(auth_router, prefix=api_prefix)
 app.include_router(billing_router, prefix=api_prefix)
+app.include_router(bills_router, prefix=api_prefix)
 app.include_router(catalog_router, prefix=api_prefix)
 app.include_router(device_router, prefix=api_prefix)
 app.include_router(health_router, prefix=api_prefix)
 app.include_router(patients_router, prefix=api_prefix)
+app.include_router(receipts_router, prefix=api_prefix)
 app.include_router(sessions_router, prefix=api_prefix)
 app.include_router(startup_router, prefix=api_prefix)
+app.include_router(sync_router, prefix=api_prefix)
 
 
 @app.exception_handler(AppError)

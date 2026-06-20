@@ -32,3 +32,9 @@ class ItemUpdate(BaseModel):
 
 class VoidDraft(BaseModel):
     reason: str | None = None
+
+
+class FinalizeDraft(BaseModel):
+    payment_method: str = "cash"
+    received_amount: float | None = None
+    notes: str | None = None

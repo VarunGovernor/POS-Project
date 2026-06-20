@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { BillDraft, ServiceItem, localApi } from "@/lib/api/client";
 
@@ -9,9 +10,11 @@ function token() {
 }
 
 export function DraftWorkspaceScreen({ draftId }: { draftId: string }) {
+  const router = useRouter();
   const [draft, setDraft] = useState<BillDraft | null>(null);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [serviceId, setServiceId] = useState("");
+  const [cashReceived, setCashReceived] = useState("");
   const [message, setMessage] = useState("");
   const [state, setState] = useState<"loading" | "ready" | "not-found" | "api-unavailable" | "error">("loading");
 
@@ -54,6 +57,22 @@ export function DraftWorkspaceScreen({ draftId }: { draftId: string }) {
     await load();
   }
 
+  async function finalizeDraft() {
+    if (!draft) return;
+    setMessage("");
+    const key = globalThis.crypto?.randomUUID?.() ?? `IDEM-${Date.now()}`;
+    try {
+      const response = await localApi.finalizeDraft(token(), draftId, key, {
+        payment_method: "cash",
+        received_amount: Number(cashReceived || draft.total_amount || 0),
+        notes: "Cash received"
+      });
+      router.push(`/billing/bills/${response.data.bill.id}`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Finalize failed.");
+    }
+  }
+
   useEffect(() => {
     void load();
   }, [draftId]);
@@ -69,6 +88,7 @@ export function DraftWorkspaceScreen({ draftId }: { draftId: string }) {
       <section className="shell panel">
         <div className="header"><h1>Draft {draft.draft_number}</h1><span className="value">{draft.status}</span></div>
         {draft.status === "voided" ? <p className="error-text">Draft voided.</p> : null}
+        {message ? <p className="error-text">{message}</p> : null}
         <p>Autosaved {draft.last_autosaved_at}</p>
         {draft.status === "draft" ? (
           <div className="actions">
@@ -99,6 +119,14 @@ export function DraftWorkspaceScreen({ draftId }: { draftId: string }) {
           <div className="status-item"><span className="label">Tax</span><span className="value">{draft.tax_amount}</span></div>
           <div className="status-item"><span className="label">Total</span><span className="value">{draft.total_amount}</span></div>
         </div>
+        {draft.status === "draft" ? (
+          <div className="form-grid">
+            <span className="label">Payment method</span>
+            <span className="value">Cash</span>
+            <label><span className="label">Cash received</span><input type="number" value={cashReceived} onChange={(event) => setCashReceived(event.target.value)} /></label>
+            <div className="actions"><button type="button" onClick={finalizeDraft}>Finalize Bill</button></div>
+          </div>
+        ) : null}
       </section>
     </main>
   );

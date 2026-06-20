@@ -85,7 +85,7 @@ describe("Phase 4 screens", () => {
     expect(screen.getByRole("link", { name: "Continue" })).toHaveAttribute("href", "/billing/drafts/1");
   });
 
-  test("draft workspace renders empty items and no finalize button", async () => {
+  test("draft workspace renders empty items", async () => {
     vi.spyOn(global, "fetch").mockImplementation((input) => {
       const url = String(input);
       if (url.includes("/api/v1/bills/drafts/1")) return ok({ draft });
@@ -95,7 +95,6 @@ describe("Phase 4 screens", () => {
     render(<DraftWorkspaceScreen draftId="1" />);
 
     await waitFor(() => expect(screen.getByText("No draft items.")).toBeInTheDocument());
-    expect(screen.queryByText("Finalize")).not.toBeInTheDocument();
   });
 
   test("add item flow calls API and edit/remove controls render", async () => {

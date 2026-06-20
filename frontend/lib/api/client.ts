@@ -192,12 +192,40 @@ export type BillDraft = {
   items?: DraftItem[];
 };
 
+export type FinalBill = {
+  id: string;
+  bill_number: string;
+  status: string;
+  currency: string;
+  subtotal_amount: number;
+  discount_amount: number;
+  tax_amount: number;
+  total_amount: number;
+  sync_status: string;
+  finalized_at: string;
+  patient_name?: string | null;
+  patient?: { id: string; full_name: string; phone: string | null; patient_number?: string } | null;
+  items?: Array<{ id: string; service_name_at_time: string; quantity: number; unit_price: number; final_line_total: number; catalog_version: string; price_version: string }>;
+  payment?: { id: string; payment_number: string; payment_method: string; status: string; amount: number; received_amount: number; change_amount: number; paid_at: string } | null;
+  receipt?: { id: string; receipt_number: string; status: string; receipt_type: string; generated_at: string } | null;
+};
+
+export type Receipt = {
+  id: string;
+  receipt_number: string;
+  status: string;
+  receipt_type: string;
+  generated_at: string;
+  receipt_payload: Record<string, unknown> & { items?: Array<Record<string, unknown>> };
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL ?? "http://127.0.0.1:8000";
 
 type RequestOptions = {
   method?: string;
   token?: string | null;
   body?: Record<string, unknown>;
+  headers?: Record<string, string>;
 };
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<ApiSuccess<T>> {
@@ -210,6 +238,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<A
   if (options.token) {
     headers.Authorization = `Bearer ${options.token}`;
   }
+  Object.assign(headers, options.headers);
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: options.method ?? "GET",
@@ -280,5 +309,21 @@ export const localApi = {
       { method: "DELETE", token }
     ),
   voidDraft: (token: string | null, draftId: string, reason: string) =>
-    request<{ draft: BillDraft }>(`/api/v1/bills/drafts/${draftId}/void`, { method: "POST", token, body: { reason } })
+    request<{ draft: BillDraft }>(`/api/v1/bills/drafts/${draftId}/void`, { method: "POST", token, body: { reason } }),
+  finalizeDraft: (token: string | null, draftId: string, idempotencyKey: string, body: { payment_method: "cash"; received_amount: number; notes?: string }) =>
+    request<{
+      bill: FinalBill;
+      payment: NonNullable<FinalBill["payment"]>;
+      receipt: NonNullable<FinalBill["receipt"]>;
+      sync_event: { id: string; event_type: string; status: string };
+    }>(`/api/v1/bills/drafts/${draftId}/finalize`, {
+      method: "POST",
+      token,
+      body,
+      headers: { "Idempotency-Key": idempotencyKey }
+    }),
+  bills: (token: string | null) =>
+    request<{ items: FinalBill[]; page: number; page_size: number; total: number; has_next: boolean }>("/api/v1/bills", { token }),
+  bill: (token: string | null, billId: string) => request<{ bill: FinalBill }>(`/api/v1/bills/${billId}`, { token }),
+  receiptByBill: (token: string | null, billId: string) => request<{ receipt: Receipt }>(`/api/v1/receipts/by-bill/${billId}`, { token })
 };

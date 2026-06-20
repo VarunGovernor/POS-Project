@@ -8,10 +8,10 @@ from typing import Any
 
 from app.config import settings
 from app.auth.security import hash_password
-from app.database.migrations import phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing
+from app.database.migrations import phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing
 
-MIGRATIONS = [phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing]
-LATEST_MIGRATION_ID = phase_4_draft_billing.MIGRATION_ID
+MIGRATIONS = [phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing]
+LATEST_MIGRATION_ID = phase_5_final_billing.MIGRATION_ID
 MIGRATION_ID = LATEST_MIGRATION_ID
 
 REQUIRED_TABLES = {
@@ -39,6 +39,12 @@ REQUIRED_TABLES = {
     "master_sync_state",
     "bill_drafts",
     "bill_draft_items",
+    "bills",
+    "bill_items",
+    "payments",
+    "receipts",
+    "sync_events",
+    "idempotency_keys",
 }
 
 _init_lock = Lock()
@@ -192,6 +198,12 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
         ("billing.bill.create", "Create bill drafts"),
         ("billing.bill.edit", "Edit bill drafts"),
         ("billing.bill.void_draft", "Void bill drafts"),
+        ("billing.bill.finalize", "Finalize bills"),
+        ("billing.bill.final.view", "View final bills"),
+        ("billing.payment.cash.create", "Create cash payments"),
+        ("billing.receipt.view", "View receipts"),
+        ("billing.receipt.generate", "Generate receipts"),
+        ("sync.event.view", "View sync events"),
     ]
     for code, name in permissions:
         conn.execute(
@@ -252,6 +264,12 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
             "billing.bill.create",
             "billing.bill.edit",
             "billing.bill.void_draft",
+            "billing.bill.finalize",
+            "billing.bill.final.view",
+            "billing.payment.cash.create",
+            "billing.receipt.view",
+            "billing.receipt.generate",
+            "sync.event.view",
         ],
         2: [code for code, _ in permissions],
     }

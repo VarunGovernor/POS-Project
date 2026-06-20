@@ -2,7 +2,7 @@
 
 Offline-first POS appliance platform foundation.
 
-Current implemented phase: Phase 4 - Draft Billing and Autosave.
+Current implemented phase: Phase 5 - Bill Finalization, Cash Payment, Receipt, and Outbox Foundation.
 
 Development seed users only:
 

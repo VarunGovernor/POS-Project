@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import sqlite3
 from datetime import datetime, timezone
 from typing import Any
@@ -11,6 +13,14 @@ from app.database.connection import connect, utc_now
 
 def _as_id(value: str | None) -> int | None:
     return int(value) if value not in (None, "") else None
+
+
+def _paise(value: float | int | None) -> int:
+    return int(round(float(value or 0) * 100))
+
+
+def _amount(value: int | None) -> float:
+    return (value or 0) / 100
 
 
 def _active_session(conn: sqlite3.Connection, device_id: int) -> dict[str, Any]:
@@ -313,3 +323,352 @@ def void_draft(draft_id: int, reason: str | None, user_id: int, request_id: str 
         draft = dict(conn.execute("SELECT * FROM bill_drafts WHERE id = ?", (draft_id,)).fetchone())
         audit(conn, "bill_draft.void", user_id=user_id, entity_type="bill_draft", entity_id=str(draft_id), request_id=request_id)
     return {"draft": _draft_header(draft)}
+
+
+def _seq(conn: sqlite3.Connection, table: str) -> int:
+    return conn.execute(f"SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM {table}").fetchone()["next_id"]
+
+
+def _number(kind: str, seq: int) -> str:
+    return f"HYD01-DEV001-{kind}-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{seq:06d}"
+
+
+def _bill_payload(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": str(row["id"]),
+        "bill_number": row["bill_number"],
+        "status": row["status"],
+        "currency": row["currency"],
+        "subtotal_amount": _amount(row["subtotal_amount_paise"]),
+        "discount_amount": _amount(row["discount_amount_paise"]),
+        "tax_amount": _amount(row["tax_amount_paise"]),
+        "total_amount": _amount(row["total_amount_paise"]),
+        "sync_status": row["sync_status"],
+        "finalized_at": row["finalized_at"],
+    }
+
+
+def _payment_payload(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": str(row["id"]),
+        "payment_number": row["payment_number"],
+        "payment_method": row["payment_method"],
+        "status": row["status"],
+        "amount": _amount(row["amount_paise"]),
+        "received_amount": _amount(row["received_amount_paise"]),
+        "change_amount": _amount(row["change_amount_paise"]),
+        "paid_at": row["paid_at"],
+    }
+
+
+def _receipt_payload(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": str(row["id"]),
+        "receipt_number": row["receipt_number"],
+        "status": row["status"],
+        "receipt_type": row["receipt_type"],
+        "generated_at": row["generated_at"],
+    }
+
+
+def _sync_payload(row: dict[str, Any]) -> dict[str, Any]:
+    return {"id": str(row["id"]), "event_type": row["event_type"], "status": row["status"]}
+
+
+def _request_hash(payload: dict[str, Any]) -> str:
+    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
+
+def finalize_draft(
+    draft_id: int,
+    data: Any,
+    context: dict[str, Any],
+    idempotency_key: str | None,
+    request_path: str,
+    request_id: str | None,
+) -> dict[str, Any]:
+    if not idempotency_key:
+        raise AppError("IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key header is required.", 400)
+    if data.payment_method != "cash":
+        raise AppError("PAYMENT_METHOD_NOT_SUPPORTED", "Only cash payment is supported.", 422)
+    request_hash = _request_hash(data.model_dump())
+    now = utc_now()
+    device = context["device"]
+    with connect() as conn:
+        idem = conn.execute("SELECT * FROM idempotency_keys WHERE idempotency_key = ?", (idempotency_key,)).fetchone()
+        if idem:
+            if idem["request_hash"] != request_hash:
+                raise AppError("IDEMPOTENCY_KEY_CONFLICT", "Idempotency key was used with different payload.", 409)
+            if idem["status"] == "completed" and idem["response_payload_json"]:
+                return json.loads(idem["response_payload_json"])
+        else:
+            conn.execute(
+                """
+                INSERT INTO idempotency_keys (
+                    idempotency_key, request_method, request_path, request_hash, status, created_at, updated_at
+                )
+                VALUES (?, 'POST', ?, ?, 'processing', ?, ?)
+                """,
+                (idempotency_key, request_path, request_hash, now, now),
+            )
+
+        if conn.execute("SELECT id FROM bills WHERE draft_id = ?", (draft_id,)).fetchone():
+            raise AppError("DUPLICATE_FINALIZATION_BLOCKED", "Draft already finalized.", 409)
+
+        session = _active_session(conn, device["id"])
+        draft = _draft_or_error(conn, draft_id, editable=True)
+        if not draft["patient_id"]:
+            raise AppError("PATIENT_REQUIRED", "Patient is required to finalize bill.", 422)
+        items = [dict(row) for row in conn.execute("SELECT * FROM bill_draft_items WHERE draft_id = ? ORDER BY id", (draft_id,)).fetchall()]
+        if not items:
+            raise AppError("DRAFT_HAS_NO_ITEMS", "Draft has no items.", 422)
+        _totals(conn, draft_id)
+        draft = _draft_or_error(conn, draft_id, editable=True)
+        total_paise = _paise(draft["total_amount"])
+        received_paise = _paise(data.received_amount if data.received_amount is not None else draft["total_amount"])
+        if received_paise < total_paise:
+            raise AppError("PAYMENT_AMOUNT_INSUFFICIENT", "Cash received is less than bill total.", 422)
+
+        bill_number = _number("BILL", _seq(conn, "bills"))
+        payment_number = _number("PAY", _seq(conn, "payments"))
+        receipt_number = _number("RCPT", _seq(conn, "receipts"))
+        conn.execute(
+            """
+            INSERT INTO bills (
+                bill_number, draft_id, organization_id, branch_id, device_id, cashier_session_id,
+                cashier_user_id, patient_id, bill_type, department_id, doctor_id, status, currency,
+                subtotal_amount_paise, discount_amount_paise, tax_amount_paise, total_amount_paise,
+                finalized_at, idempotency_key, sync_status, created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'finalized', 'INR', ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+            """,
+            (
+                bill_number, draft_id, draft["organization_id"], draft["branch_id"], draft["device_id"],
+                session["id"], context["user"]["id"], draft["patient_id"], draft["bill_type"],
+                draft["department_id"], draft["doctor_id"], _paise(draft["subtotal_amount"]),
+                _paise(draft["discount_amount"]), _paise(draft["tax_amount"]), total_paise,
+                now, idempotency_key, now, now,
+            ),
+        )
+        bill = dict(conn.execute("SELECT * FROM bills WHERE bill_number = ?", (bill_number,)).fetchone())
+        for item in items:
+            conn.execute(
+                """
+                INSERT INTO bill_items (
+                    bill_id, draft_item_id, organization_id, branch_id, device_id, service_id,
+                    service_code_at_time, service_name_at_time, department_id_at_time,
+                    department_name_at_time, doctor_id, quantity, unit_price_paise,
+                    gross_amount_paise, discount_amount_paise, tax_amount_paise,
+                    final_line_total_paise, catalog_version, price_version, created_at, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    bill["id"], item["id"], item["organization_id"], item["branch_id"], item["device_id"],
+                    item["service_id"], item["service_code_at_time"], item["service_name_at_time"],
+                    item["department_id_at_time"], item["department_name_at_time"], item["doctor_id"],
+                    item["quantity"], _paise(item["unit_price_at_time"]), _paise(item["gross_amount"]),
+                    _paise(item["discount_amount"]), _paise(item["tax_amount"]),
+                    _paise(item["final_line_total"]), item["catalog_version"], item["price_version"], now, now,
+                ),
+            )
+        conn.execute(
+            """
+            INSERT INTO payments (
+                payment_number, bill_id, organization_id, branch_id, device_id, cashier_session_id,
+                cashier_user_id, payment_method, status, currency, amount_paise, received_amount_paise,
+                change_amount_paise, idempotency_key, paid_at, created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'cash', 'paid', 'INR', ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                payment_number, bill["id"], bill["organization_id"], bill["branch_id"], bill["device_id"],
+                bill["cashier_session_id"], bill["cashier_user_id"], total_paise, received_paise,
+                received_paise - total_paise, idempotency_key, now, now, now,
+            ),
+        )
+        payment = dict(conn.execute("SELECT * FROM payments WHERE payment_number = ?", (payment_number,)).fetchone())
+        receipt_json = _build_receipt_payload(conn, bill, payment, receipt_number)
+        conn.execute(
+            """
+            INSERT INTO receipts (
+                receipt_number, bill_id, payment_id, organization_id, branch_id, device_id,
+                cashier_session_id, cashier_user_id, status, receipt_type, receipt_payload_json,
+                generated_at, created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'generated', 'original', ?, ?, ?, ?)
+            """,
+            (
+                receipt_number, bill["id"], payment["id"], bill["organization_id"], bill["branch_id"],
+                bill["device_id"], bill["cashier_session_id"], bill["cashier_user_id"],
+                json.dumps(receipt_json), now, now, now,
+            ),
+        )
+        receipt = dict(conn.execute("SELECT * FROM receipts WHERE receipt_number = ?", (receipt_number,)).fetchone())
+        sync_payload = {"bill_id": bill["id"], "bill_number": bill["bill_number"], "total_amount_paise": total_paise}
+        conn.execute(
+            """
+            INSERT INTO sync_events (
+                event_type, entity_type, entity_id, organization_id, branch_id, device_id,
+                payload_json, status, attempt_count, idempotency_key, created_at, updated_at
+            )
+            VALUES ('BILL_FINALIZED', 'bill', ?, ?, ?, ?, ?, 'pending', 0, ?, ?, ?)
+            """,
+            (str(bill["id"]), bill["organization_id"], bill["branch_id"], bill["device_id"], json.dumps(sync_payload), idempotency_key, now, now),
+        )
+        sync_event = dict(conn.execute("SELECT * FROM sync_events WHERE entity_type = 'bill' AND entity_id = ?", (str(bill["id"]),)).fetchone())
+        conn.execute("UPDATE bill_drafts SET status = 'finalized', updated_at = ?, last_autosaved_at = ? WHERE id = ?", (now, now, draft_id))
+
+        for action, entity_type, entity_id in [
+            ("bill.finalize", "bill", bill["id"]),
+            ("payment.cash.create", "payment", payment["id"]),
+            ("receipt.generate", "receipt", receipt["id"]),
+            ("sync_event.create", "sync_event", sync_event["id"]),
+        ]:
+            audit(conn, action, user_id=context["user"]["id"], entity_type=entity_type, entity_id=str(entity_id), request_id=request_id)
+
+        response = {
+            "bill": _bill_payload(bill),
+            "payment": _payment_payload(payment),
+            "receipt": _receipt_payload(receipt),
+            "sync_event": _sync_payload(sync_event),
+        }
+        conn.execute(
+            "UPDATE idempotency_keys SET response_payload_json = ?, status = 'completed', updated_at = ? WHERE idempotency_key = ?",
+            (json.dumps(response), now, idempotency_key),
+        )
+    return response
+
+
+def _build_receipt_payload(conn: sqlite3.Connection, bill: dict[str, Any], payment: dict[str, Any], receipt_number: str) -> dict[str, Any]:
+    org = conn.execute("SELECT organization_name FROM organizations WHERE id = ?", (bill["organization_id"],)).fetchone()
+    branch = conn.execute("SELECT branch_name FROM branches WHERE id = ?", (bill["branch_id"],)).fetchone()
+    device = conn.execute("SELECT device_code, counter_name FROM devices WHERE id = ?", (bill["device_id"],)).fetchone()
+    patient = conn.execute("SELECT full_name, patient_number FROM patients WHERE id = ?", (bill["patient_id"],)).fetchone()
+    cashier = conn.execute("SELECT display_name FROM users WHERE id = ?", (bill["cashier_user_id"],)).fetchone()
+    items = [
+        {
+            "service_name": row["service_name_at_time"],
+            "quantity": row["quantity"],
+            "unit_price": _amount(row["unit_price_paise"]),
+            "line_total": _amount(row["final_line_total_paise"]),
+        }
+        for row in conn.execute("SELECT * FROM bill_items WHERE bill_id = ? ORDER BY id", (bill["id"],)).fetchall()
+    ]
+    return {
+        "hospital_or_organization_name": org["organization_name"],
+        "branch_name": branch["branch_name"],
+        "device_code": device["device_code"],
+        "counter_name": device["counter_name"],
+        "bill_number": bill["bill_number"],
+        "receipt_number": receipt_number,
+        "patient_name": patient["full_name"],
+        "patient_number": patient["patient_number"],
+        "cashier_name": cashier["display_name"],
+        "bill_type": bill["bill_type"],
+        "items": items,
+        "subtotal_amount": _amount(bill["subtotal_amount_paise"]),
+        "discount_amount": _amount(bill["discount_amount_paise"]),
+        "tax_amount": _amount(bill["tax_amount_paise"]),
+        "total_amount": _amount(bill["total_amount_paise"]),
+        "payment_method": payment["payment_method"],
+        "amount_paid": _amount(payment["amount_paise"]),
+        "received_amount": _amount(payment["received_amount_paise"]),
+        "change_amount": _amount(payment["change_amount_paise"]),
+        "currency": bill["currency"],
+        "generated_at": payment["paid_at"],
+    }
+
+
+def list_bills(status: str | None, patient_id: str | None, cashier_session_id: str | None, page: int, page_size: int) -> dict[str, Any]:
+    page = max(page, 1)
+    page_size = min(max(page_size, 1), 100)
+    clauses = ["b.organization_id = 1"]
+    params: list[Any] = []
+    if status:
+        clauses.append("b.status = ?")
+        params.append(status)
+    if patient_id:
+        clauses.append("b.patient_id = ?")
+        params.append(int(patient_id))
+    if cashier_session_id:
+        clauses.append("b.cashier_session_id = ?")
+        params.append(int(cashier_session_id))
+    where = " AND ".join(clauses)
+    offset = (page - 1) * page_size
+    with connect() as conn:
+        total = conn.execute(f"SELECT COUNT(*) AS total FROM bills b WHERE {where}", params).fetchone()["total"]
+        rows = conn.execute(
+            f"""
+            SELECT b.*, p.full_name AS patient_name
+            FROM bills b LEFT JOIN patients p ON p.id = b.patient_id
+            WHERE {where}
+            ORDER BY b.finalized_at DESC
+            LIMIT ? OFFSET ?
+            """,
+            [*params, page_size, offset],
+        ).fetchall()
+    items = [{**_bill_payload(dict(row)), "patient_name": row["patient_name"]} for row in rows]
+    return {"items": items, "page": page, "page_size": page_size, "total": total, "has_next": offset + len(rows) < total}
+
+
+def bill_detail(bill_id: int) -> dict[str, Any]:
+    with connect() as conn:
+        bill = row_dict(conn.execute("SELECT * FROM bills WHERE id = ?", (bill_id,)).fetchone())
+        if not bill:
+            raise AppError("BILL_NOT_FOUND", "Bill not found.", 404)
+        patient = row_dict(conn.execute("SELECT id, full_name, phone, patient_number FROM patients WHERE id = ?", (bill["patient_id"],)).fetchone())
+        department = row_dict(conn.execute("SELECT id, department_name FROM departments WHERE id = ?", (bill["department_id"],)).fetchone()) if bill["department_id"] else None
+        doctor = row_dict(conn.execute("SELECT id, full_name FROM doctors WHERE id = ?", (bill["doctor_id"],)).fetchone()) if bill["doctor_id"] else None
+        items = [dict(row) for row in conn.execute("SELECT * FROM bill_items WHERE bill_id = ? ORDER BY id", (bill_id,)).fetchall()]
+        payment = row_dict(conn.execute("SELECT * FROM payments WHERE bill_id = ?", (bill_id,)).fetchone())
+        receipt = row_dict(conn.execute("SELECT * FROM receipts WHERE bill_id = ?", (bill_id,)).fetchone())
+    return {
+        "bill": {
+            **_bill_payload(bill),
+            "patient": ({**patient, "id": str(patient["id"])} if patient else None),
+            "department": ({**department, "id": str(department["id"])} if department else None),
+            "doctor": ({**doctor, "id": str(doctor["id"])} if doctor else None),
+            "items": [
+                {
+                    "id": str(item["id"]),
+                    "service_name_at_time": item["service_name_at_time"],
+                    "quantity": item["quantity"],
+                    "unit_price": _amount(item["unit_price_paise"]),
+                    "final_line_total": _amount(item["final_line_total_paise"]),
+                    "catalog_version": item["catalog_version"],
+                    "price_version": item["price_version"],
+                }
+                for item in items
+            ],
+            "payment": _payment_payload(payment) if payment else None,
+            "receipt": _receipt_payload(receipt) if receipt else None,
+        }
+    }
+
+
+def receipt_by_bill(bill_id: int) -> dict[str, Any]:
+    with connect() as conn:
+        row = row_dict(conn.execute("SELECT * FROM receipts WHERE bill_id = ?", (bill_id,)).fetchone())
+    if not row:
+        raise AppError("RECEIPT_NOT_FOUND", "Receipt not found.", 404)
+    return {"receipt": {**_receipt_payload(row), "receipt_payload": json.loads(row["receipt_payload_json"])}}
+
+
+def receipt_detail(receipt_id: int) -> dict[str, Any]:
+    with connect() as conn:
+        row = row_dict(conn.execute("SELECT * FROM receipts WHERE id = ?", (receipt_id,)).fetchone())
+    if not row:
+        raise AppError("RECEIPT_NOT_FOUND", "Receipt not found.", 404)
+    return {"receipt": {**_receipt_payload(row), "receipt_payload": json.loads(row["receipt_payload_json"])}}
+
+
+def pending_sync_events() -> dict[str, Any]:
+    with connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, event_type, entity_type, entity_id, status, attempt_count, created_at
+            FROM sync_events WHERE status = 'pending' ORDER BY id
+            """
+        ).fetchall()
+    return {"items": [{**dict(row), "id": str(row["id"])} for row in rows]}
