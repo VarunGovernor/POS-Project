@@ -2,7 +2,7 @@
 
 Offline-first POS appliance platform foundation.
 
-Current implemented phase: Phase 8 - Sync Engine Foundation.
+Current implemented phase: Phase 9 - Reports, Settings, Health, and Support.
 
 Development seed users only:
 

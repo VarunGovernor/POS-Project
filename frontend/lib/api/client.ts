@@ -303,6 +303,54 @@ export type SyncConflict = {
   created_at: string;
 };
 
+export type TodayReport = {
+  business_date: string;
+  currency: string;
+  bill_count: number;
+  gross_amount: number;
+  discount_amount: number;
+  tax_amount: number;
+  net_amount: number;
+  cash_collected: number;
+  receipt_count: number;
+  printed_receipt_count: number;
+  pending_sync_count: number;
+};
+
+export type SettingItem = {
+  id: string;
+  setting_key: string;
+  setting_value: string;
+  setting_scope: string;
+  is_readonly: boolean;
+};
+
+export type SupportStatus = {
+  api: string;
+  database: string;
+  printer: string;
+  sync: string;
+  recovery: string;
+  storage: string;
+  app_version: string;
+  backend_version: string;
+  database_version: string;
+  pending_sync_count: number;
+  failed_sync_count: number;
+  failed_print_job_count: number;
+  open_recovery_marker_count: number;
+};
+
+export type AuditLog = {
+  id: string;
+  action: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  severity: string;
+  request_id: string | null;
+  created_at: string;
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL ?? "http://127.0.0.1:8000";
 
 type RequestOptions = {
@@ -429,5 +477,15 @@ export const localApi = {
     request<{ items: SyncEvent[]; page: number; page_size: number; total: number; has_next: boolean }>("/api/v1/sync/events", { token }),
   syncRetryAll: (token: string | null) => request<{ attempted: number; synced: number; failed: number; conflicts: number }>("/api/v1/sync/retry", { method: "POST", token }),
   syncRetryEvent: (token: string | null, eventId: string) => request<{ event: SyncEvent }>(`/api/v1/sync/events/${eventId}/retry`, { method: "POST", token }),
-  syncConflicts: (token: string | null) => request<{ items: SyncConflict[] }>("/api/v1/sync/conflicts", { token })
+  syncConflicts: (token: string | null) => request<{ items: SyncConflict[] }>("/api/v1/sync/conflicts", { token }),
+  todayReport: (token: string | null) => request<TodayReport>("/api/v1/reports/today-collection", { token }),
+  pendingSyncReport: (token: string | null) => request<{ by_status: Array<{ status: string; count: number }>; by_event_type: Array<{ event_type: string; count: number }> }>("/api/v1/reports/pending-sync", { token }),
+  departmentReport: (token: string | null) => request<{ items: Array<{ department_name: string; bill_count: number; net_amount: number }> }>("/api/v1/reports/department-collection", { token }),
+  settings: (token: string | null) => request<{ items: SettingItem[] }>("/api/v1/settings", { token }),
+  updateSetting: (token: string | null, body: { setting_key: string; setting_value: string; setting_scope: string }) =>
+    request<{ setting: SettingItem }>("/api/v1/settings", { method: "PATCH", token, body }),
+  supportStatus: (token: string | null) => request<SupportStatus>("/api/v1/support/status", { token }),
+  supportBundle: (token: string | null) => request<{ bundle: { bundle_id: string; status: string; file_path: string; created_at: string } }>("/api/v1/support/bundle", { method: "POST", token }),
+  auditLogs: (token: string | null) =>
+    request<{ items: AuditLog[]; page: number; page_size: number; total: number; has_next: boolean }>("/api/v1/audit/logs", { token })
 };

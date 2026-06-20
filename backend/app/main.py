@@ -14,6 +14,7 @@ from app.catalog.router import router as catalog_router
 from app.database.connection import initialize_database
 from app.device.router import router as device_router
 from app.health.router import router as health_router
+from app.operations.router import router as operations_router
 from app.patients.router import router as patients_router
 from app.printer.router import receipt_router as printer_receipt_router, router as printer_router
 from app.recovery.repository import scan_recovery
@@ -46,6 +47,7 @@ app.include_router(bills_router, prefix=api_prefix)
 app.include_router(catalog_router, prefix=api_prefix)
 app.include_router(device_router, prefix=api_prefix)
 app.include_router(health_router, prefix=api_prefix)
+app.include_router(operations_router, prefix=api_prefix)
 app.include_router(patients_router, prefix=api_prefix)
 app.include_router(printer_router, prefix=api_prefix)
 app.include_router(printer_receipt_router, prefix=api_prefix)

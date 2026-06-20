@@ -8,10 +8,10 @@ from typing import Any
 
 from app.config import settings
 from app.auth.security import hash_password
-from app.database.migrations import phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing, phase_6_printer_jobs, phase_7_recovery_foundation, phase_8_sync_foundation
+from app.database.migrations import phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing, phase_6_printer_jobs, phase_7_recovery_foundation, phase_8_sync_foundation, phase_9_reports_support
 
-MIGRATIONS = [phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing, phase_6_printer_jobs, phase_7_recovery_foundation, phase_8_sync_foundation]
-LATEST_MIGRATION_ID = phase_8_sync_foundation.MIGRATION_ID
+MIGRATIONS = [phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing, phase_6_printer_jobs, phase_7_recovery_foundation, phase_8_sync_foundation, phase_9_reports_support]
+LATEST_MIGRATION_ID = phase_9_reports_support.MIGRATION_ID
 MIGRATION_ID = LATEST_MIGRATION_ID
 
 REQUIRED_TABLES = {
@@ -50,6 +50,7 @@ REQUIRED_TABLES = {
     "printer_devices",
     "printer_jobs",
     "recovery_markers",
+    "support_bundles",
 }
 
 _init_lock = Lock()
@@ -182,6 +183,16 @@ def seed_development_data(conn: sqlite3.Connection) -> None:
         """,
         (now, now),
     )
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO settings (
+            id, organization_id, branch_id, device_id, setting_key, setting_value,
+            setting_scope, is_readonly, created_at, updated_at
+        )
+        VALUES (2, 1, 1, 1, 'receipt.header', 'CounterOS Hospital', 'device', 0, ?, ?)
+        """,
+        (now, now),
+    )
     seed_phase_2_data(conn, now)
     seed_phase_3_data(conn, now)
     seed_phase_6_data(conn, now)
@@ -221,6 +232,12 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
         ("sync.event.retry", "Retry sync events"),
         ("sync.run", "Run sync"),
         ("sync.conflict.view", "View sync conflicts"),
+        ("report.view", "View reports"),
+        ("report.today.view", "View today collection report"),
+        ("report.session.view", "View cashier session report"),
+        ("report.department.view", "View department collection report"),
+        ("settings.update", "Update settings"),
+        ("support.bundle.create", "Create support bundle"),
         ("printer.view", "View printer"),
         ("printer.test", "Test printer"),
         ("printer.receipt.print", "Print receipts"),
@@ -297,6 +314,11 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
             "billing.receipt.generate",
             "sync.event.view",
             "sync.event.retry",
+            "report.view",
+            "report.today.view",
+            "report.session.view",
+            "settings.view",
+            "support.view",
             "printer.view",
             "printer.receipt.print",
             "printer.receipt.reprint",
