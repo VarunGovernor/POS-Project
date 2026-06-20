@@ -1,0 +1,25 @@
+# Demo Checklist
+
+- [ ] Fresh demo database reset intentionally with `--yes`
+- [ ] Backend starts
+- [ ] Frontend starts
+- [ ] Startup screen loads
+- [ ] Cashier login works
+- [ ] Cashier session opens
+- [ ] Patient creation works
+- [ ] Catalog services show real seed data
+- [ ] Draft bill persists after refresh
+- [ ] Item quantity update changes backend totals
+- [ ] Cash finalization creates bill, payment, receipt, sync event
+- [ ] Duplicate finalization does not create a second bill
+- [ ] Receipt preview opens
+- [ ] Development printer creates print job
+- [ ] Duplicate original print is blocked
+- [ ] Reprint creates a separate print job
+- [ ] Sync retry records an attempt
+- [ ] Recovery scan is idempotent
+- [ ] Reports show real finalized bill/payment data
+- [ ] Readonly setting is protected
+- [ ] Support bundle is created
+- [ ] Audit logs are visible to admin
+- [ ] Cashier session closes
