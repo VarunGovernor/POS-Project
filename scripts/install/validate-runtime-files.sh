@@ -35,7 +35,7 @@ success_label="service restart ""success"
 sd_word="systemd"
 browser_mode_word="kiosk"
 if grep -R "$restart_label\\|$success_label\\|$sd_word.*active\\|$browser_mode_word.*running" frontend/app backend/app; then
-  echo "fake runtime UI/status text found" >&2
+  echo "forbidden runtime UI/status text found" >&2
   exit 1
 fi
 

@@ -265,7 +265,15 @@ def close_cashier_session(user_id: int, session_id: int, closing_cash_amount: fl
             raise AppError("CASHIER_SESSION_NOT_FOUND", "Cashier session not found.", 404)
         if session["status"] != "open":
             raise AppError("CASHIER_SESSION_NOT_OPEN", "Cashier session is not open.", 409)
-        expected = float(session["opening_cash_amount"])
+        paid_cash = conn.execute(
+            """
+            SELECT COALESCE(SUM(amount_paise), 0) AS total
+            FROM payments
+            WHERE cashier_session_id = ? AND status = 'paid' AND payment_method = 'cash'
+            """,
+            (session_id,),
+        ).fetchone()["total"] / 100
+        expected = float(session["opening_cash_amount"]) + paid_cash
         difference = float(closing_cash_amount) - expected
         now = utc_now()
         conn.execute(
