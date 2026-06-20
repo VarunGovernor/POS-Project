@@ -1,3 +1,6 @@
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 
@@ -5,12 +8,24 @@ from app.core.errors import AppError
 from app.core.logging import configure_logging
 from app.core.request_id import RequestIdMiddleware
 from app.core.responses import error_response
+from app.database.connection import initialize_database
 from app.health.router import router as health_router
 from app.startup.router import router as startup_router
 
 configure_logging()
+logger = logging.getLogger(__name__)
 
-app = FastAPI(title="CounterOS Local API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        initialize_database()
+    except Exception as exc:
+        logger.error("Database startup failed: %s", exc)
+    yield
+
+
+app = FastAPI(title="CounterOS Local API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(RequestIdMiddleware)
 
 api_prefix = "/api/v1"
