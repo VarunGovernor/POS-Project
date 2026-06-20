@@ -2,7 +2,7 @@
 
 Offline-first POS appliance platform foundation.
 
-Current implemented phase: Phase 5 - Bill Finalization, Cash Payment, Receipt, and Outbox Foundation.
+Current implemented phase: Phase 6 - Receipt Printing and Printer Jobs.
 
 Development seed users only:
 

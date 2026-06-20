@@ -89,7 +89,7 @@ describe("Phase 5 screens", () => {
     await waitFor(() => expect(screen.getByText(/PAYMENT_AMOUNT_INSUFFICIENT/)).toBeInTheDocument());
   });
 
-  test("bill list detail receipt render and no print", async () => {
+  test("bill list detail receipt render", async () => {
     vi.spyOn(global, "fetch").mockImplementation((input) => {
       const url = String(input);
       if (url.endsWith("/api/v1/bills")) return ok({ items: [bill], page: 1, page_size: 25, total: 1, has_next: false });
@@ -102,6 +102,5 @@ describe("Phase 5 screens", () => {
     await waitFor(() => expect(screen.getByText("RCPT-1")).toBeInTheDocument());
     render(<ReceiptPreviewScreen billId="1" />);
     await waitFor(() => expect(screen.getByText("Development Organization")).toBeInTheDocument());
-    expect(screen.queryByText("Print")).not.toBeInTheDocument();
   });
 });

@@ -8,10 +8,10 @@ from typing import Any
 
 from app.config import settings
 from app.auth.security import hash_password
-from app.database.migrations import phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing
+from app.database.migrations import phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing, phase_6_printer_jobs
 
-MIGRATIONS = [phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing]
-LATEST_MIGRATION_ID = phase_5_final_billing.MIGRATION_ID
+MIGRATIONS = [phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing, phase_6_printer_jobs]
+LATEST_MIGRATION_ID = phase_6_printer_jobs.MIGRATION_ID
 MIGRATION_ID = LATEST_MIGRATION_ID
 
 REQUIRED_TABLES = {
@@ -45,6 +45,8 @@ REQUIRED_TABLES = {
     "receipts",
     "sync_events",
     "idempotency_keys",
+    "printer_devices",
+    "printer_jobs",
 }
 
 _init_lock = Lock()
@@ -172,6 +174,7 @@ def seed_development_data(conn: sqlite3.Connection) -> None:
     )
     seed_phase_2_data(conn, now)
     seed_phase_3_data(conn, now)
+    seed_phase_6_data(conn, now)
 
 
 def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
@@ -204,6 +207,11 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
         ("billing.receipt.view", "View receipts"),
         ("billing.receipt.generate", "Generate receipts"),
         ("sync.event.view", "View sync events"),
+        ("printer.view", "View printer"),
+        ("printer.test", "Test printer"),
+        ("printer.receipt.print", "Print receipts"),
+        ("printer.receipt.reprint", "Reprint receipts"),
+        ("printer.job.retry", "Retry printer jobs"),
     ]
     for code, name in permissions:
         conn.execute(
@@ -270,6 +278,10 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
             "billing.receipt.view",
             "billing.receipt.generate",
             "sync.event.view",
+            "printer.view",
+            "printer.receipt.print",
+            "printer.receipt.reprint",
+            "printer.job.retry",
         ],
         2: [code for code, _ in permissions],
     }
@@ -285,6 +297,26 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
 
     conn.execute("INSERT OR IGNORE INTO user_roles (user_id, role_id, created_at) VALUES (1, 1, ?)", (now,))
     conn.execute("INSERT OR IGNORE INTO user_roles (user_id, role_id, created_at) VALUES (2, 2, ?)", (now,))
+
+
+def seed_phase_6_data(conn: sqlite3.Connection, now: str) -> None:
+    if not _table_exists(conn, "printer_devices"):
+        return
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO printer_devices (
+            id, organization_id, branch_id, device_id, printer_code, printer_name,
+            printer_type, connection_type, connection_config_json, status, is_default,
+            last_seen_at, created_at, updated_at
+        )
+        VALUES (
+            1, 1, 1, 1, 'DEV-PRINTER', 'Development Printer',
+            'dev', 'dev', '{"mode":"development"}', 'active', 1,
+            ?, ?, ?
+        )
+        """,
+        (now, now, now),
+    )
 
 
 def seed_phase_3_data(conn: sqlite3.Connection, now: str) -> None:

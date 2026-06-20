@@ -219,6 +219,32 @@ export type Receipt = {
   receipt_payload: Record<string, unknown> & { items?: Array<Record<string, unknown>> };
 };
 
+export type PrinterJob = {
+  id: string;
+  job_number: string;
+  job_type: string;
+  status: string;
+  attempt_count: number;
+  printed_at: string | null;
+  failure_message: string | null;
+};
+
+export type PrinterStatus = {
+  status: string;
+  printer: {
+    id: string;
+    printer_code: string;
+    printer_name: string;
+    printer_type: string;
+    connection_type: string;
+    is_default: boolean;
+    last_seen_at: string | null;
+  } | null;
+  queued_job_count: number;
+  failed_job_count: number;
+  last_printed_at: string | null;
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL ?? "http://127.0.0.1:8000";
 
 type RequestOptions = {
@@ -325,5 +351,13 @@ export const localApi = {
   bills: (token: string | null) =>
     request<{ items: FinalBill[]; page: number; page_size: number; total: number; has_next: boolean }>("/api/v1/bills", { token }),
   bill: (token: string | null, billId: string) => request<{ bill: FinalBill }>(`/api/v1/bills/${billId}`, { token }),
-  receiptByBill: (token: string | null, billId: string) => request<{ receipt: Receipt }>(`/api/v1/receipts/by-bill/${billId}`, { token })
+  receiptByBill: (token: string | null, billId: string) => request<{ receipt: Receipt }>(`/api/v1/receipts/by-bill/${billId}`, { token }),
+  printerStatus: (token: string | null) => request<PrinterStatus>("/api/v1/printer/status", { token }),
+  printerJobs: (token: string | null) =>
+    request<{ items: PrinterJob[]; page: number; page_size: number; total: number; has_next: boolean }>("/api/v1/printer/jobs", { token }),
+  printerTest: (token: string | null) => request<{ job: PrinterJob }>("/api/v1/printer/test", { method: "POST", token }),
+  retryPrinterJob: (token: string | null, jobId: string) => request<{ job: PrinterJob }>(`/api/v1/printer/jobs/${jobId}/retry`, { method: "POST", token }),
+  printReceipt: (token: string | null, receiptId: string) => request<{ job: PrinterJob }>(`/api/v1/receipts/${receiptId}/print`, { method: "POST", token }),
+  reprintReceipt: (token: string | null, receiptId: string, reason: string) =>
+    request<{ job: PrinterJob }>(`/api/v1/receipts/${receiptId}/reprint`, { method: "POST", token, body: { reason } })
 };

@@ -3,6 +3,7 @@ from fastapi import APIRouter, Request
 from app.config import settings
 from app.core.responses import success_response
 from app.database.connection import database_health, local_device_status
+from app.printer.repository import printer_status_value
 
 router = APIRouter(prefix="/health", tags=["health"])
 
@@ -11,6 +12,7 @@ router = APIRouter(prefix="/health", tags=["health"])
 async def health(request: Request) -> dict:
     db = database_health()
     device_status = local_device_status()
+    printer_status = printer_status_value()
     return success_response(
         request,
         {
@@ -18,7 +20,7 @@ async def health(request: Request) -> dict:
             "api": "ok",
             "database": db["status"],
             "sync": "not_configured",
-            "printer": "not_configured",
+            "printer": printer_status,
             "storage": "not_configured",
             "license": "not_configured",
             "device": device_status,

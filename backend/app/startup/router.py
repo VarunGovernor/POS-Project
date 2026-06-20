@@ -3,6 +3,7 @@ from fastapi import APIRouter, Request
 from app.config import settings
 from app.core.responses import success_response
 from app.database.connection import database_health, local_device_status
+from app.printer.repository import printer_status_value
 
 router = APIRouter(prefix="/startup", tags=["startup"])
 
@@ -12,6 +13,7 @@ async def startup_status(request: Request) -> dict:
     db = database_health()
     db_ok = db["status"] == "ok"
     device_status = local_device_status()
+    printer_status = printer_status_value()
     return success_response(
         request,
         {
@@ -23,7 +25,7 @@ async def startup_status(request: Request) -> dict:
             "device_status": device_status,
             "license_status": "not_configured",
             "tenant_status": "not_configured",
-            "printer_status": "not_configured",
+            "printer_status": printer_status,
             "sync_status": "not_configured",
             "app_version": settings.app_version,
             "backend_version": settings.backend_version,

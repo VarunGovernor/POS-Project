@@ -15,6 +15,7 @@ from app.database.connection import initialize_database
 from app.device.router import router as device_router
 from app.health.router import router as health_router
 from app.patients.router import router as patients_router
+from app.printer.router import receipt_router as printer_receipt_router, router as printer_router
 from app.sessions.router import router as sessions_router
 from app.startup.router import router as startup_router
 
@@ -42,6 +43,8 @@ app.include_router(catalog_router, prefix=api_prefix)
 app.include_router(device_router, prefix=api_prefix)
 app.include_router(health_router, prefix=api_prefix)
 app.include_router(patients_router, prefix=api_prefix)
+app.include_router(printer_router, prefix=api_prefix)
+app.include_router(printer_receipt_router, prefix=api_prefix)
 app.include_router(receipts_router, prefix=api_prefix)
 app.include_router(sessions_router, prefix=api_prefix)
 app.include_router(startup_router, prefix=api_prefix)
