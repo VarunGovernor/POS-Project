@@ -16,6 +16,8 @@ from app.device.router import router as device_router
 from app.health.router import router as health_router
 from app.patients.router import router as patients_router
 from app.printer.router import receipt_router as printer_receipt_router, router as printer_router
+from app.recovery.repository import scan_recovery
+from app.recovery.router import router as recovery_router
 from app.sessions.router import router as sessions_router
 from app.startup.router import router as startup_router
 
@@ -27,6 +29,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     try:
         initialize_database()
+        scan_recovery()
     except Exception as exc:
         logger.error("Database startup failed: %s", exc)
     yield
@@ -45,6 +48,7 @@ app.include_router(health_router, prefix=api_prefix)
 app.include_router(patients_router, prefix=api_prefix)
 app.include_router(printer_router, prefix=api_prefix)
 app.include_router(printer_receipt_router, prefix=api_prefix)
+app.include_router(recovery_router, prefix=api_prefix)
 app.include_router(receipts_router, prefix=api_prefix)
 app.include_router(sessions_router, prefix=api_prefix)
 app.include_router(startup_router, prefix=api_prefix)

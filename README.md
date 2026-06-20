@@ -2,7 +2,7 @@
 
 Offline-first POS appliance platform foundation.
 
-Current implemented phase: Phase 6 - Receipt Printing and Printer Jobs.
+Current implemented phase: Phase 7 - Recovery Engine Foundation.
 
 Development seed users only:
 

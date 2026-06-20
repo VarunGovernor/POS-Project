@@ -8,10 +8,10 @@ from typing import Any
 
 from app.config import settings
 from app.auth.security import hash_password
-from app.database.migrations import phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing, phase_6_printer_jobs
+from app.database.migrations import phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing, phase_6_printer_jobs, phase_7_recovery_foundation
 
-MIGRATIONS = [phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing, phase_6_printer_jobs]
-LATEST_MIGRATION_ID = phase_6_printer_jobs.MIGRATION_ID
+MIGRATIONS = [phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing, phase_6_printer_jobs, phase_7_recovery_foundation]
+LATEST_MIGRATION_ID = phase_7_recovery_foundation.MIGRATION_ID
 MIGRATION_ID = LATEST_MIGRATION_ID
 
 REQUIRED_TABLES = {
@@ -47,6 +47,7 @@ REQUIRED_TABLES = {
     "idempotency_keys",
     "printer_devices",
     "printer_jobs",
+    "recovery_markers",
 }
 
 _init_lock = Lock()
@@ -212,6 +213,9 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
         ("printer.receipt.print", "Print receipts"),
         ("printer.receipt.reprint", "Reprint receipts"),
         ("printer.job.retry", "Retry printer jobs"),
+        ("recovery.view", "View recovery"),
+        ("recovery.resolve", "Resolve recovery markers"),
+        ("recovery.scan", "Run recovery scan"),
     ]
     for code, name in permissions:
         conn.execute(
@@ -282,6 +286,8 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
             "printer.receipt.print",
             "printer.receipt.reprint",
             "printer.job.retry",
+            "recovery.view",
+            "recovery.scan",
         ],
         2: [code for code, _ in permissions],
     }

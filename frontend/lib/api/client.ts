@@ -22,6 +22,7 @@ export type HealthData = {
   database: string;
   sync: string;
   printer: string;
+  recovery: string;
   storage: string;
   license: string;
   device: string;
@@ -245,6 +246,28 @@ export type PrinterStatus = {
   last_printed_at: string | null;
 };
 
+export type RecoveryStatus = {
+  recovery_required: boolean;
+  open_marker_count: number;
+  critical_count: number;
+  warning_count: number;
+  info_count: number;
+  last_scan_at: string | null;
+};
+
+export type RecoveryMarker = {
+  id: string;
+  marker_code: string;
+  marker_type: string;
+  severity: string;
+  status: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  title: string;
+  description: string;
+  detected_at: string;
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL ?? "http://127.0.0.1:8000";
 
 type RequestOptions = {
@@ -359,5 +382,11 @@ export const localApi = {
   retryPrinterJob: (token: string | null, jobId: string) => request<{ job: PrinterJob }>(`/api/v1/printer/jobs/${jobId}/retry`, { method: "POST", token }),
   printReceipt: (token: string | null, receiptId: string) => request<{ job: PrinterJob }>(`/api/v1/receipts/${receiptId}/print`, { method: "POST", token }),
   reprintReceipt: (token: string | null, receiptId: string, reason: string) =>
-    request<{ job: PrinterJob }>(`/api/v1/receipts/${receiptId}/reprint`, { method: "POST", token, body: { reason } })
+    request<{ job: PrinterJob }>(`/api/v1/receipts/${receiptId}/reprint`, { method: "POST", token, body: { reason } }),
+  recoveryStatus: (token: string | null) => request<RecoveryStatus>("/api/v1/recovery/status", { token }),
+  recoveryItems: (token: string | null) =>
+    request<{ items: RecoveryMarker[]; page: number; page_size: number; total: number; has_next: boolean }>("/api/v1/recovery/work-items", { token }),
+  recoveryScan: (token: string | null) => request<RecoveryStatus>("/api/v1/recovery/scan", { method: "POST", token }),
+  recoveryResolve: (token: string | null, markerId: string, resolution_action = "acknowledged") =>
+    request<{ marker: RecoveryMarker }>("/api/v1/recovery/resolve", { method: "POST", token, body: { marker_id: markerId, resolution_action } })
 };
