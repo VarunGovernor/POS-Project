@@ -2,7 +2,7 @@
 
 Offline-first POS appliance platform foundation.
 
-Current implemented phase: Phase 9 - Reports, Settings, Health, and Support.
+Current implemented phase: Phase 10 - OS and Kiosk Packaging Foundation.
 
 Development seed users only:
 
@@ -13,25 +13,48 @@ Do not use these passwords for production.
 
 ## Backend
 
-```powershell
-PYTHONPATH=backend python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```sh
+scripts/dev/run-backend.sh
 ```
 
 ## Frontend
 
-```powershell
-cd frontend
-npm install
-npm run dev -- --hostname 127.0.0.1 --port 3000
+```sh
+scripts/dev/run-frontend.sh
 ```
 
 ## Tests
 
-```powershell
-cd backend
-PYTHONPATH=. python -m pytest app/tests
+```sh
+scripts/test/run-backend-tests.sh
+scripts/test/run-frontend-tests.sh
+scripts/build/build-frontend.sh
+scripts/install/validate-runtime-files.sh
+```
 
-cd ../frontend
-npm test
-npm run build
+## Runtime Packaging Foundation
+
+Systemd service templates live under `os/systemd/`. They use `/opt/counteros`
+and `/etc/counteros/counteros.env` placeholders and are not installed by normal
+development commands.
+
+Validate host/runtime files:
+
+```sh
+os/install/validate-host.sh
+scripts/install/validate-runtime-files.sh
+```
+
+Production-like local launch order:
+
+1. Copy `os/install/counteros.env.example` to the target env file and review it.
+2. Start backend with `scripts/dev/run-backend.sh`.
+3. Start frontend with `scripts/dev/run-frontend.sh`.
+4. Launch kiosk manually with `os/kiosk/launch-kiosk.sh` on a Linux host with Chromium.
+
+Service status, once templates are manually installed on Linux:
+
+```sh
+systemctl status counteros-api counteros-frontend counteros-kiosk
+journalctl -u counteros-api.service
 ```

@@ -1,0 +1,19 @@
+[Unit]
+Description=CounterOS frontend
+After=network-online.target counteros-api.service
+Requires=counteros-api.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=counteros
+WorkingDirectory=/opt/counteros/frontend
+EnvironmentFile=/etc/counteros/counteros.env
+ExecStart=/usr/bin/npm run start -- --hostname ${COUNTEROS_HOST} --port ${COUNTEROS_FRONTEND_PORT}
+Restart=on-failure
+RestartSec=5
+
+# Logs: journalctl -u counteros-frontend.service
+
+[Install]
+WantedBy=multi-user.target

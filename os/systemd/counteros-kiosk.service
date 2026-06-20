@@ -1,0 +1,18 @@
+[Unit]
+Description=CounterOS kiosk browser
+After=graphical.target counteros-frontend.service
+Requires=counteros-frontend.service
+
+[Service]
+Type=simple
+User=counteros
+WorkingDirectory=/opt/counteros
+EnvironmentFile=/etc/counteros/counteros.env
+ExecStart=/opt/counteros/os/kiosk/launch-kiosk.sh
+Restart=on-failure
+RestartSec=5
+
+# Logs: journalctl -u counteros-kiosk.service
+
+[Install]
+WantedBy=graphical.target
