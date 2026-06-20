@@ -9,7 +9,7 @@ from app.core.logging import configure_logging
 from app.core.request_id import RequestIdMiddleware
 from app.core.responses import error_response
 from app.auth.router import router as auth_router
-from app.billing.router import bills_router, receipts_router, router as billing_router, sync_router
+from app.billing.router import bills_router, receipts_router, router as billing_router
 from app.catalog.router import router as catalog_router
 from app.database.connection import initialize_database
 from app.device.router import router as device_router
@@ -20,6 +20,7 @@ from app.recovery.repository import scan_recovery
 from app.recovery.router import router as recovery_router
 from app.sessions.router import router as sessions_router
 from app.startup.router import router as startup_router
+from app.sync.router import router as sync_router
 
 configure_logging()
 logger = logging.getLogger(__name__)

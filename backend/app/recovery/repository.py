@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from app.auth.repository import audit
@@ -82,6 +83,9 @@ def scan_recovery() -> dict[str, Any]:
             _add_marker(conn, "PENDING_PRINT_JOB_FOUND", "warning", "printer_job", row["id"], "Pending print job found", "A printer job is queued or printing.")
         for row in conn.execute("SELECT id FROM printer_jobs WHERE status = 'failed'").fetchall():
             _add_marker(conn, "FAILED_PRINT_JOB_FOUND", "warning", "printer_job", row["id"], "Failed print job found", "A printer job failed and may be retried.")
+        stale_before = (datetime.now(timezone.utc) - timedelta(minutes=15)).isoformat()
+        for row in conn.execute("SELECT id FROM sync_events WHERE status = 'syncing' AND COALESCE(last_attempt_at, updated_at) < ?", (stale_before,)).fetchall():
+            _add_marker(conn, "STALE_SYNCING_EVENT_FOUND", "warning", "sync_event", row["id"], "Stale syncing event found", "A sync event was left syncing beyond the retry threshold.")
     return recovery_status()
 
 

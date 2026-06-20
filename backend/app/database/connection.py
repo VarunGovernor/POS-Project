@@ -8,10 +8,10 @@ from typing import Any
 
 from app.config import settings
 from app.auth.security import hash_password
-from app.database.migrations import phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing, phase_6_printer_jobs, phase_7_recovery_foundation
+from app.database.migrations import phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing, phase_6_printer_jobs, phase_7_recovery_foundation, phase_8_sync_foundation
 
-MIGRATIONS = [phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing, phase_6_printer_jobs, phase_7_recovery_foundation]
-LATEST_MIGRATION_ID = phase_7_recovery_foundation.MIGRATION_ID
+MIGRATIONS = [phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing, phase_6_printer_jobs, phase_7_recovery_foundation, phase_8_sync_foundation]
+LATEST_MIGRATION_ID = phase_8_sync_foundation.MIGRATION_ID
 MIGRATION_ID = LATEST_MIGRATION_ID
 
 REQUIRED_TABLES = {
@@ -44,6 +44,8 @@ REQUIRED_TABLES = {
     "payments",
     "receipts",
     "sync_events",
+    "sync_attempts",
+    "sync_conflicts",
     "idempotency_keys",
     "printer_devices",
     "printer_jobs",
@@ -94,6 +96,13 @@ def initialize_database() -> None:
 
 def apply_migrations(conn: sqlite3.Connection) -> None:
     for migration in MIGRATIONS:
+        if _table_exists(conn, "migration_records"):
+            applied = conn.execute(
+                "SELECT 1 FROM migration_records WHERE migration_id = ? AND status = 'applied'",
+                (migration.MIGRATION_ID,),
+            ).fetchone()
+            if applied:
+                continue
         now = utc_now()
         try:
             for statement in migration.STATEMENTS:
@@ -198,6 +207,7 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
         ("catalog.department.view", "View departments"),
         ("catalog.doctor.view", "View doctors"),
         ("sync.master.view", "View master sync state"),
+        ("sync.status.view", "View sync status"),
         ("billing.bill.view", "View bill drafts"),
         ("billing.bill.create", "Create bill drafts"),
         ("billing.bill.edit", "Edit bill drafts"),
@@ -208,6 +218,9 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
         ("billing.receipt.view", "View receipts"),
         ("billing.receipt.generate", "Generate receipts"),
         ("sync.event.view", "View sync events"),
+        ("sync.event.retry", "Retry sync events"),
+        ("sync.run", "Run sync"),
+        ("sync.conflict.view", "View sync conflicts"),
         ("printer.view", "View printer"),
         ("printer.test", "Test printer"),
         ("printer.receipt.print", "Print receipts"),
@@ -272,6 +285,7 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
             "catalog.department.view",
             "catalog.doctor.view",
             "sync.master.view",
+            "sync.status.view",
             "billing.bill.view",
             "billing.bill.create",
             "billing.bill.edit",
@@ -282,6 +296,7 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
             "billing.receipt.view",
             "billing.receipt.generate",
             "sync.event.view",
+            "sync.event.retry",
             "printer.view",
             "printer.receipt.print",
             "printer.receipt.reprint",

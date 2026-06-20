@@ -5,6 +5,7 @@ from app.core.responses import success_response
 from app.database.connection import database_health, local_device_status
 from app.printer.repository import printer_status_value
 from app.recovery.repository import recovery_required
+from app.sync.repository import sync_status
 
 router = APIRouter(prefix="/startup", tags=["startup"])
 
@@ -16,6 +17,7 @@ async def startup_status(request: Request) -> dict:
     device_status = local_device_status()
     printer_status = printer_status_value()
     required = recovery_required()
+    sync = sync_status()
     return success_response(
         request,
         {
@@ -28,7 +30,7 @@ async def startup_status(request: Request) -> dict:
             "license_status": "not_configured",
             "tenant_status": "not_configured",
             "printer_status": printer_status,
-            "sync_status": "not_configured",
+            "sync_status": sync["status"],
             "app_version": settings.app_version,
             "backend_version": settings.backend_version,
             "frontend_version": settings.frontend_version,

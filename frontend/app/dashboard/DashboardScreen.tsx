@@ -77,6 +77,7 @@ export function DashboardScreen() {
           <Link className="button secondary" href="/billing/bills">Bills</Link>
           <Link className="button secondary" href="/printer">Printer</Link>
           <Link className="button secondary" href="/recovery">Recovery</Link>
+          <Link className="button secondary" href="/sync">Sync</Link>
           <button type="button" onClick={logout}>Logout</button>
         </div>
       </section>

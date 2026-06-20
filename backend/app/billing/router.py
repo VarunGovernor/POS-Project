@@ -9,7 +9,6 @@ from app.billing.repository import (
     finalize_draft,
     list_bills,
     list_drafts,
-    pending_sync_events,
     receipt_by_bill,
     receipt_detail,
     remove_item,
@@ -23,7 +22,6 @@ from app.core.responses import success_response
 router = APIRouter(prefix="/bills/drafts", tags=["bill-drafts"])
 bills_router = APIRouter(prefix="/bills", tags=["bills"])
 receipts_router = APIRouter(prefix="/receipts", tags=["receipts"])
-sync_router = APIRouter(prefix="/sync", tags=["sync"])
 
 
 @router.post("")
@@ -114,8 +112,3 @@ async def receipt_for_bill(bill_id: int, request: Request, context: dict = Depen
 @receipts_router.get("/{receipt_id}")
 async def receipt(receipt_id: int, request: Request, context: dict = Depends(require_permission("billing.receipt.view"))) -> dict:
     return success_response(request, receipt_detail(receipt_id))
-
-
-@sync_router.get("/events")
-async def sync_events(request: Request, context: dict = Depends(require_permission("sync.event.view"))) -> dict:
-    return success_response(request, pending_sync_events())

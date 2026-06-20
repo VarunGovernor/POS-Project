@@ -268,6 +268,41 @@ export type RecoveryMarker = {
   detected_at: string;
 };
 
+export type SyncStatus = {
+  status: string;
+  pending_count: number;
+  syncing_count: number;
+  synced_count: number;
+  failed_retryable_count: number;
+  failed_permanent_count: number;
+  conflict_count: number;
+  last_successful_sync_at: string | null;
+  last_attempt_at: string | null;
+  adapter: string;
+};
+
+export type SyncEvent = {
+  id: string;
+  event_type: string;
+  entity_type: string;
+  entity_id: string;
+  status: string;
+  attempt_count: number;
+  last_attempt_at: string | null;
+  next_attempt_at: string | null;
+  created_at: string;
+};
+
+export type SyncConflict = {
+  id: string;
+  sync_event_id: string;
+  entity_type: string;
+  entity_id: string;
+  conflict_type: string;
+  resolution_status: string;
+  created_at: string;
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL ?? "http://127.0.0.1:8000";
 
 type RequestOptions = {
@@ -388,5 +423,11 @@ export const localApi = {
     request<{ items: RecoveryMarker[]; page: number; page_size: number; total: number; has_next: boolean }>("/api/v1/recovery/work-items", { token }),
   recoveryScan: (token: string | null) => request<RecoveryStatus>("/api/v1/recovery/scan", { method: "POST", token }),
   recoveryResolve: (token: string | null, markerId: string, resolution_action = "acknowledged") =>
-    request<{ marker: RecoveryMarker }>("/api/v1/recovery/resolve", { method: "POST", token, body: { marker_id: markerId, resolution_action } })
+    request<{ marker: RecoveryMarker }>("/api/v1/recovery/resolve", { method: "POST", token, body: { marker_id: markerId, resolution_action } }),
+  syncStatus: (token: string | null) => request<SyncStatus>("/api/v1/sync/status", { token }),
+  syncEvents: (token: string | null) =>
+    request<{ items: SyncEvent[]; page: number; page_size: number; total: number; has_next: boolean }>("/api/v1/sync/events", { token }),
+  syncRetryAll: (token: string | null) => request<{ attempted: number; synced: number; failed: number; conflicts: number }>("/api/v1/sync/retry", { method: "POST", token }),
+  syncRetryEvent: (token: string | null, eventId: string) => request<{ event: SyncEvent }>(`/api/v1/sync/events/${eventId}/retry`, { method: "POST", token }),
+  syncConflicts: (token: string | null) => request<{ items: SyncConflict[] }>("/api/v1/sync/conflicts", { token })
 };
