@@ -2,7 +2,7 @@
 
 Offline-first POS appliance platform foundation.
 
-Current implemented phase: Phase 3 - Master Data, Patient, and Catalog Foundation.
+Current implemented phase: Phase 4 - Draft Billing and Autosave.
 
 Development seed users only:
 

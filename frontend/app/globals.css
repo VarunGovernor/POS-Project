@@ -73,7 +73,8 @@ p {
   margin-top: 20px;
 }
 
-input {
+input,
+select {
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--text);

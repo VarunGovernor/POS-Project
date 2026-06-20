@@ -8,10 +8,10 @@ from typing import Any
 
 from app.config import settings
 from app.auth.security import hash_password
-from app.database.migrations import phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog
+from app.database.migrations import phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing
 
-MIGRATIONS = [phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog]
-LATEST_MIGRATION_ID = phase_3_patient_catalog.MIGRATION_ID
+MIGRATIONS = [phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing]
+LATEST_MIGRATION_ID = phase_4_draft_billing.MIGRATION_ID
 MIGRATION_ID = LATEST_MIGRATION_ID
 
 REQUIRED_TABLES = {
@@ -37,6 +37,8 @@ REQUIRED_TABLES = {
     "service_prices",
     "tax_rules",
     "master_sync_state",
+    "bill_drafts",
+    "bill_draft_items",
 }
 
 _init_lock = Lock()
@@ -186,6 +188,10 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
         ("catalog.department.view", "View departments"),
         ("catalog.doctor.view", "View doctors"),
         ("sync.master.view", "View master sync state"),
+        ("billing.bill.view", "View bill drafts"),
+        ("billing.bill.create", "Create bill drafts"),
+        ("billing.bill.edit", "Edit bill drafts"),
+        ("billing.bill.void_draft", "Void bill drafts"),
     ]
     for code, name in permissions:
         conn.execute(
@@ -242,6 +248,10 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
             "catalog.department.view",
             "catalog.doctor.view",
             "sync.master.view",
+            "billing.bill.view",
+            "billing.bill.create",
+            "billing.bill.edit",
+            "billing.bill.void_draft",
         ],
         2: [code for code, _ in permissions],
     }

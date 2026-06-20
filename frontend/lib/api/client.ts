@@ -157,6 +157,41 @@ export type MasterSyncState = {
   status: string;
 };
 
+export type DraftItem = {
+  id: string;
+  service_id: string;
+  service_name_at_time: string;
+  department_id_at_time: string | null;
+  department_name_at_time: string | null;
+  quantity: number;
+  unit_price_at_time: number;
+  gross_amount: number;
+  discount_amount: number;
+  tax_amount: number;
+  final_line_total: number;
+  catalog_version: string;
+  price_version: string;
+};
+
+export type BillDraft = {
+  id: string;
+  draft_number: string;
+  status: string;
+  patient_id?: string | null;
+  patient_name?: string | null;
+  bill_type: string;
+  department_id?: string | null;
+  doctor_id?: string | null;
+  subtotal_amount?: number;
+  discount_amount?: number;
+  tax_amount?: number;
+  total_amount: number;
+  last_autosaved_at?: string;
+  updated_at?: string;
+  patient?: { id: string; full_name: string; phone: string | null } | null;
+  items?: DraftItem[];
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL ?? "http://127.0.0.1:8000";
 
 type RequestOptions = {
@@ -223,5 +258,27 @@ export const localApi = {
   departments: (token: string | null) => request<{ items: Department[] }>("/api/v1/catalog/departments", { token }),
   doctors: (token: string | null) => request<{ items: Doctor[] }>("/api/v1/catalog/doctors", { token }),
   masterSyncState: (token: string | null) =>
-    request<{ items: MasterSyncState[] }>("/api/v1/catalog/master-sync-state", { token })
+    request<{ items: MasterSyncState[] }>("/api/v1/catalog/master-sync-state", { token }),
+  createDraft: (token: string | null, body: { patient_id?: string; bill_type: string; department_id?: string; doctor_id?: string; notes?: string }) =>
+    request<{ draft: BillDraft }>("/api/v1/bills/drafts", { method: "POST", token, body }),
+  drafts: (token: string | null) =>
+    request<{ items: BillDraft[]; page: number; page_size: number; total: number; has_next: boolean }>("/api/v1/bills/drafts", { token }),
+  draft: (token: string | null, draftId: string) => request<{ draft: BillDraft }>(`/api/v1/bills/drafts/${draftId}`, { token }),
+  addDraftItem: (token: string | null, draftId: string, body: { service_id: string; quantity: number; discount_amount?: number; doctor_id?: string; notes?: string }) =>
+    request<{ item: DraftItem; totals: { subtotal_amount: number; discount_amount: number; tax_amount: number; total_amount: number }; last_autosaved_at: string }>(
+      `/api/v1/bills/drafts/${draftId}/items`,
+      { method: "POST", token, body }
+    ),
+  updateDraftItem: (token: string | null, draftId: string, itemId: string, body: { quantity: number; discount_amount?: number; notes?: string }) =>
+    request<{ item: DraftItem; totals: { subtotal_amount: number; discount_amount: number; tax_amount: number; total_amount: number }; last_autosaved_at: string }>(
+      `/api/v1/bills/drafts/${draftId}/items/${itemId}`,
+      { method: "PATCH", token, body }
+    ),
+  removeDraftItem: (token: string | null, draftId: string, itemId: string) =>
+    request<{ removed: boolean; totals: { subtotal_amount: number; discount_amount: number; tax_amount: number; total_amount: number }; last_autosaved_at: string }>(
+      `/api/v1/bills/drafts/${draftId}/items/${itemId}`,
+      { method: "DELETE", token }
+    ),
+  voidDraft: (token: string | null, draftId: string, reason: string) =>
+    request<{ draft: BillDraft }>(`/api/v1/bills/drafts/${draftId}/void`, { method: "POST", token, body: { reason } })
 };
