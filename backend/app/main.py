@@ -9,9 +9,11 @@ from app.core.logging import configure_logging
 from app.core.request_id import RequestIdMiddleware
 from app.core.responses import error_response
 from app.auth.router import router as auth_router
+from app.catalog.router import router as catalog_router
 from app.database.connection import initialize_database
 from app.device.router import router as device_router
 from app.health.router import router as health_router
+from app.patients.router import router as patients_router
 from app.sessions.router import router as sessions_router
 from app.startup.router import router as startup_router
 
@@ -33,8 +35,10 @@ app.add_middleware(RequestIdMiddleware)
 
 api_prefix = "/api/v1"
 app.include_router(auth_router, prefix=api_prefix)
+app.include_router(catalog_router, prefix=api_prefix)
 app.include_router(device_router, prefix=api_prefix)
 app.include_router(health_router, prefix=api_prefix)
+app.include_router(patients_router, prefix=api_prefix)
 app.include_router(sessions_router, prefix=api_prefix)
 app.include_router(startup_router, prefix=api_prefix)
 

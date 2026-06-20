@@ -108,6 +108,55 @@ export type CashierSession = {
   notes: string | null;
 };
 
+export type Patient = {
+  id: string;
+  patient_number: string;
+  full_name: string;
+  phone: string | null;
+  gender: string | null;
+  age_years: number | null;
+  sync_status: string;
+};
+
+export type ServiceItem = {
+  id: string;
+  service_code: string;
+  service_name: string;
+  service_type: string;
+  department_id: string | null;
+  department_name: string | null;
+  default_price: number | null;
+  currency: string | null;
+  catalog_version: string;
+  price_version: string | null;
+  status: string;
+};
+
+export type Department = {
+  id: string;
+  department_code: string;
+  department_name: string;
+  status: string;
+};
+
+export type Doctor = {
+  id: string;
+  doctor_code: string;
+  full_name: string;
+  specialization: string | null;
+  department_id: string | null;
+  department_name: string | null;
+  status: string;
+};
+
+export type MasterSyncState = {
+  id: string;
+  master_type: string;
+  version_code: string;
+  last_successful_sync_at: string | null;
+  status: string;
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL ?? "http://127.0.0.1:8000";
 
 type RequestOptions = {
@@ -156,5 +205,23 @@ export const localApi = {
   openSession: (token: string | null, body: { counter_name: string; opening_cash_amount: number; notes?: string }) =>
     request<{ session: CashierSession }>("/api/v1/sessions/open", { method: "POST", token, body }),
   closeSession: (token: string | null, body: { session_id: string; closing_cash_amount: number; notes?: string }) =>
-    request<{ session: CashierSession }>("/api/v1/sessions/close", { method: "POST", token, body })
+    request<{ session: CashierSession }>("/api/v1/sessions/close", { method: "POST", token, body }),
+  patients: (token: string | null, q = "") =>
+    request<{ items: Patient[]; page: number; page_size: number; total: number; has_next: boolean }>(
+      `/api/v1/patients${q ? `?q=${encodeURIComponent(q)}` : ""}`,
+      { token }
+    ),
+  createPatient: (
+    token: string | null,
+    body: { full_name: string; phone?: string; gender?: string; age_years?: number; address_line1?: string }
+  ) => request<{ patient: Patient }>("/api/v1/patients", { method: "POST", token, body }),
+  services: (token: string | null, q = "") =>
+    request<{ items: ServiceItem[]; page: number; page_size: number; total: number; has_next: boolean }>(
+      `/api/v1/catalog/services${q ? `?q=${encodeURIComponent(q)}` : ""}`,
+      { token }
+    ),
+  departments: (token: string | null) => request<{ items: Department[] }>("/api/v1/catalog/departments", { token }),
+  doctors: (token: string | null) => request<{ items: Doctor[] }>("/api/v1/catalog/doctors", { token }),
+  masterSyncState: (token: string | null) =>
+    request<{ items: MasterSyncState[] }>("/api/v1/catalog/master-sync-state", { token })
 };

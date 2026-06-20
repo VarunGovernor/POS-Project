@@ -70,6 +70,8 @@ export function DashboardScreen() {
         <div className="actions">
           {!state.session ? <Link className="button" href="/session/open">Open Session</Link> : null}
           {state.session ? <Link className="button" href="/session/close">Close Session</Link> : null}
+          <Link className="button secondary" href="/patients">Patient Lookup</Link>
+          <Link className="button secondary" href="/catalog">Catalog Lookup</Link>
           <button type="button" onClick={logout}>Logout</button>
         </div>
       </section>

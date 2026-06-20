@@ -8,10 +8,10 @@ from typing import Any
 
 from app.config import settings
 from app.auth.security import hash_password
-from app.database.migrations import phase_1_initial_schema, phase_2_auth_sessions
+from app.database.migrations import phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog
 
-MIGRATIONS = [phase_1_initial_schema, phase_2_auth_sessions]
-LATEST_MIGRATION_ID = phase_2_auth_sessions.MIGRATION_ID
+MIGRATIONS = [phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog]
+LATEST_MIGRATION_ID = phase_3_patient_catalog.MIGRATION_ID
 MIGRATION_ID = LATEST_MIGRATION_ID
 
 REQUIRED_TABLES = {
@@ -29,6 +29,14 @@ REQUIRED_TABLES = {
     "user_roles",
     "login_sessions",
     "cashier_sessions",
+    "patients",
+    "departments",
+    "doctors",
+    "services",
+    "price_lists",
+    "service_prices",
+    "tax_rules",
+    "master_sync_state",
 }
 
 _init_lock = Lock()
@@ -155,6 +163,7 @@ def seed_development_data(conn: sqlite3.Connection) -> None:
         (now, now),
     )
     seed_phase_2_data(conn, now)
+    seed_phase_3_data(conn, now)
 
 
 def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
@@ -171,6 +180,12 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
         ("support.view", "View support"),
         ("audit.view", "View audit"),
         ("health.view", "View health"),
+        ("patient.view", "View patients"),
+        ("patient.create", "Create patients"),
+        ("catalog.service.view", "View services"),
+        ("catalog.department.view", "View departments"),
+        ("catalog.doctor.view", "View doctors"),
+        ("sync.master.view", "View master sync state"),
     ]
     for code, name in permissions:
         conn.execute(
@@ -215,7 +230,19 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
         )
 
     role_permissions = {
-        1: ["auth.login", "session.view", "session.open", "session.close", "device.view"],
+        1: [
+            "auth.login",
+            "session.view",
+            "session.open",
+            "session.close",
+            "device.view",
+            "patient.view",
+            "patient.create",
+            "catalog.service.view",
+            "catalog.department.view",
+            "catalog.doctor.view",
+            "sync.master.view",
+        ],
         2: [code for code, _ in permissions],
     }
     for role_id, codes in role_permissions.items():
@@ -230,6 +257,101 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
 
     conn.execute("INSERT OR IGNORE INTO user_roles (user_id, role_id, created_at) VALUES (1, 1, ?)", (now,))
     conn.execute("INSERT OR IGNORE INTO user_roles (user_id, role_id, created_at) VALUES (2, 2, ?)", (now,))
+
+
+def seed_phase_3_data(conn: sqlite3.Connection, now: str) -> None:
+    if not _table_exists(conn, "services"):
+        return
+
+    departments = [
+        (1, "GEN-MED", "General Medicine"),
+        (2, "LAB", "Laboratory"),
+        (3, "PHARM", "Pharmacy"),
+    ]
+    for department_id, code, name in departments:
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO departments (
+                id, organization_id, branch_id, department_code, department_name, status, created_at, updated_at
+            )
+            VALUES (?, 1, 1, ?, ?, 'active', ?, ?)
+            """,
+            (department_id, code, name, now, now),
+        )
+
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO doctors (
+            id, organization_id, branch_id, department_id, doctor_code, full_name,
+            specialization, status, created_at, updated_at
+        )
+        VALUES (1, 1, 1, 1, 'DR-GEN-1', 'Dr. Dev General', 'General Medicine', 'active', ?, ?)
+        """,
+        (now, now),
+    )
+
+    services = [
+        (1, 1, "OP-CONSULT", "OP Consultation", "op"),
+        (2, 2, "CBC", "CBC Test", "lab"),
+        (3, 1, "GEN-SERVICE", "General Service", "general"),
+    ]
+    for service_id, department_id, code, name, service_type in services:
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO services (
+                id, organization_id, branch_id, department_id, service_code, service_name,
+                service_type, status, catalog_version, created_at, updated_at
+            )
+            VALUES (?, 1, 1, ?, ?, ?, ?, 'active', 'CAT-DEV-001', ?, ?)
+            """,
+            (service_id, department_id, code, name, service_type, now, now),
+        )
+
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO price_lists (
+            id, organization_id, branch_id, price_list_code, price_list_name, status,
+            effective_from, effective_to, created_at, updated_at
+        )
+        VALUES (1, 1, 1, 'STANDARD', 'Standard Price List', 'active', NULL, NULL, ?, ?)
+        """,
+        (now, now),
+    )
+
+    prices = [(1, 500), (2, 300), (3, 100)]
+    for service_id, amount in prices:
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO service_prices (
+                organization_id, branch_id, service_id, price_list_id, price_amount,
+                currency, price_version, status, created_at, updated_at
+            )
+            VALUES (1, 1, ?, 1, ?, 'INR', 'PRICE-DEV-001', 'active', ?, ?)
+            """,
+            (service_id, amount, now, now),
+        )
+
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO tax_rules (
+            id, organization_id, branch_id, tax_code, tax_name, tax_rate, status, created_at, updated_at
+        )
+        VALUES (1, 1, 1, 'GST-0', 'No Tax', 0, 'active', ?, ?)
+        """,
+        (now, now),
+    )
+
+    for master_type in ["departments", "doctors", "services", "prices", "tax_rules"]:
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO master_sync_state (
+                organization_id, branch_id, master_type, version_code, last_successful_sync_at,
+                status, created_at, updated_at
+            )
+            VALUES (1, 1, ?, 'DEV-001', NULL, 'local_seeded', ?, ?)
+            """,
+            (master_type, now, now),
+        )
 
 
 def write_startup_state(conn: sqlite3.Connection, startup_status: str) -> None:

@@ -2,7 +2,7 @@
 
 Offline-first POS appliance platform foundation.
 
-Current implemented phase: Phase 2 - Auth, Device, Permissions, and Cashier Sessions.
+Current implemented phase: Phase 3 - Master Data, Patient, and Catalog Foundation.
 
 Development seed users only:
 
