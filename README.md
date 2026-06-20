@@ -2,13 +2,19 @@
 
 Offline-first POS appliance platform foundation.
 
-Current implemented phase: Phase 0 - Project Foundation.
+Current implemented phase: Phase 2 - Auth, Device, Permissions, and Cashier Sessions.
+
+Development seed users only:
+
+- `cashier` / `cashier123`
+- `admin` / `admin123`
+
+Do not use these passwords for production.
 
 ## Backend
 
 ```powershell
-cd backend
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+PYTHONPATH=backend python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 ## Frontend
@@ -23,7 +29,7 @@ npm run dev -- --hostname 127.0.0.1 --port 3000
 
 ```powershell
 cd backend
-python -m pytest app/tests
+PYTHONPATH=. python -m pytest app/tests
 
 cd ../frontend
 npm test

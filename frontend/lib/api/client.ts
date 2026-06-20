@@ -59,13 +59,78 @@ export type StartupStatusData = {
   database_version: string;
 };
 
+export type AuthUser = {
+  id: string;
+  username: string;
+  display_name: string;
+  roles: string[];
+  permissions: string[];
+};
+
+export type LoginData = {
+  session_token: string;
+  user: AuthUser;
+  offline_login: boolean;
+  expires_at: string;
+};
+
+export type MeData = {
+  user: AuthUser;
+  login_session_id: string;
+  expires_at: string;
+};
+
+export type DeviceStatusData = {
+  device_id: string;
+  device_code: string;
+  device_name: string;
+  installation_id: string;
+  organization_id: string;
+  branch_id: string;
+  counter_name: string;
+  status: string;
+  activation_status: string;
+  last_successful_sync_at: string | null;
+  last_master_sync_at: string | null;
+};
+
+export type CashierSession = {
+  id: string;
+  session_number: string;
+  status: string;
+  counter_name: string;
+  opening_cash_amount: number;
+  closing_cash_amount: number | null;
+  expected_cash_amount: number | null;
+  cash_difference_amount: number | null;
+  opened_at: string;
+  closed_at: string | null;
+  notes: string | null;
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL ?? "http://127.0.0.1:8000";
 
-async function request<T>(path: string): Promise<ApiSuccess<T>> {
+type RequestOptions = {
+  method?: string;
+  token?: string | null;
+  body?: Record<string, unknown>;
+};
+
+async function request<T>(path: string, options: RequestOptions = {}): Promise<ApiSuccess<T>> {
+  const headers: Record<string, string> = {
+    Accept: "application/json"
+  };
+  if (options.body) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (options.token) {
+    headers.Authorization = `Bearer ${options.token}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      Accept: "application/json"
-    },
+    method: options.method ?? "GET",
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined,
     cache: "no-store"
   });
 
@@ -80,5 +145,16 @@ async function request<T>(path: string): Promise<ApiSuccess<T>> {
 export const localApi = {
   health: () => request<HealthData>("/api/v1/health"),
   version: () => request<VersionData>("/api/v1/health/version"),
-  startupStatus: () => request<StartupStatusData>("/api/v1/startup/status")
+  startupStatus: () => request<StartupStatusData>("/api/v1/startup/status"),
+  login: (body: { username: string; password: string; counter_name: string }) =>
+    request<LoginData>("/api/v1/auth/login", { method: "POST", body }),
+  me: (token: string | null) => request<MeData>("/api/v1/auth/me", { token }),
+  logout: (token: string | null) => request<{ status: string }>("/api/v1/auth/logout", { method: "POST", token }),
+  deviceStatus: (token: string | null) => request<DeviceStatusData>("/api/v1/device/status", { token }),
+  currentSession: (token: string | null) =>
+    request<{ session: CashierSession | null }>("/api/v1/sessions/current", { token }),
+  openSession: (token: string | null, body: { counter_name: string; opening_cash_amount: number; notes?: string }) =>
+    request<{ session: CashierSession }>("/api/v1/sessions/open", { method: "POST", token, body }),
+  closeSession: (token: string | null, body: { session_id: string; closing_cash_amount: number; notes?: string }) =>
+    request<{ session: CashierSession }>("/api/v1/sessions/close", { method: "POST", token, body })
 };

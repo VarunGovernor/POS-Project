@@ -7,11 +7,12 @@ from threading import Lock
 from typing import Any
 
 from app.config import settings
-from app.database.migrations.phase_1_initial_schema import (
-    DESCRIPTION,
-    MIGRATION_ID,
-    STATEMENTS,
-)
+from app.auth.security import hash_password
+from app.database.migrations import phase_1_initial_schema, phase_2_auth_sessions
+
+MIGRATIONS = [phase_1_initial_schema, phase_2_auth_sessions]
+LATEST_MIGRATION_ID = phase_2_auth_sessions.MIGRATION_ID
+MIGRATION_ID = LATEST_MIGRATION_ID
 
 REQUIRED_TABLES = {
     "organizations",
@@ -21,6 +22,13 @@ REQUIRED_TABLES = {
     "migration_records",
     "app_runtime_state",
     "audit_logs",
+    "users",
+    "roles",
+    "permissions",
+    "role_permissions",
+    "user_roles",
+    "login_sessions",
+    "cashier_sessions",
 }
 
 _init_lock = Lock()
@@ -66,36 +74,37 @@ def initialize_database() -> None:
 
 
 def apply_migrations(conn: sqlite3.Connection) -> None:
-    now = utc_now()
-    try:
-        for statement in STATEMENTS:
-            conn.execute(statement)
-        conn.execute(
-            """
-            INSERT INTO migration_records (
-                migration_id, description, status, started_at, completed_at, created_at
-            )
-            VALUES (?, ?, 'applied', ?, ?, ?)
-            ON CONFLICT(migration_id) DO UPDATE SET
-                status = 'applied',
-                completed_at = excluded.completed_at,
-                failure_message = NULL
-            """,
-            (MIGRATION_ID, DESCRIPTION, now, now, now),
-        )
-    except Exception as exc:
-        if _table_exists(conn, "migration_records"):
+    for migration in MIGRATIONS:
+        now = utc_now()
+        try:
+            for statement in migration.STATEMENTS:
+                conn.execute(statement)
             conn.execute(
                 """
-                INSERT OR REPLACE INTO migration_records (
-                    migration_id, description, status, started_at, completed_at,
-                    failure_message, created_at
+                INSERT INTO migration_records (
+                    migration_id, description, status, started_at, completed_at, created_at
                 )
-                VALUES (?, ?, 'failed', ?, NULL, ?, ?)
+                VALUES (?, ?, 'applied', ?, ?, ?)
+                ON CONFLICT(migration_id) DO UPDATE SET
+                    status = 'applied',
+                    completed_at = excluded.completed_at,
+                    failure_message = NULL
                 """,
-                (MIGRATION_ID, DESCRIPTION, now, str(exc), now),
+                (migration.MIGRATION_ID, migration.DESCRIPTION, now, now, now),
             )
-        raise
+        except Exception as exc:
+            if _table_exists(conn, "migration_records"):
+                conn.execute(
+                    """
+                    INSERT OR REPLACE INTO migration_records (
+                        migration_id, description, status, started_at, completed_at,
+                        failure_message, created_at
+                    )
+                    VALUES (?, ?, 'failed', ?, NULL, ?, ?)
+                    """,
+                    (migration.MIGRATION_ID, migration.DESCRIPTION, now, str(exc), now),
+                )
+            raise
 
 
 def seed_development_data(conn: sqlite3.Connection) -> None:
@@ -126,10 +135,14 @@ def seed_development_data(conn: sqlite3.Connection) -> None:
         )
         VALUES (
             1, 1, 1, 'DEV_DEVICE', 'Development Device', 'Development Counter',
-            'DEV-INSTALLATION', 'active', 'not_activated', ?, ?
+            'DEV-INSTALLATION', 'active', 'active', ?, ?
         )
         """,
         (now, now),
+    )
+    conn.execute(
+        "UPDATE devices SET activation_status = 'active', updated_at = ? WHERE id = 1",
+        (now,),
     )
     conn.execute(
         """
@@ -141,6 +154,82 @@ def seed_development_data(conn: sqlite3.Connection) -> None:
         """,
         (now, now),
     )
+    seed_phase_2_data(conn, now)
+
+
+def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
+    if not _table_exists(conn, "users"):
+        return
+
+    permissions = [
+        ("auth.login", "Login"),
+        ("session.view", "View cashier session"),
+        ("session.open", "Open cashier session"),
+        ("session.close", "Close cashier session"),
+        ("device.view", "View device"),
+        ("settings.view", "View settings"),
+        ("support.view", "View support"),
+        ("audit.view", "View audit"),
+        ("health.view", "View health"),
+    ]
+    for code, name in permissions:
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO permissions (
+                permission_code, permission_name, description, created_at, updated_at
+            )
+            VALUES (?, ?, NULL, ?, ?)
+            """,
+            (code, name, now, now),
+        )
+
+    roles = [
+        (1, "cashier", "Cashier", "Can manage own cashier session"),
+        (2, "admin", "Admin", "Development admin/support user"),
+    ]
+    for role_id, code, name, description in roles:
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO roles (
+                id, organization_id, role_code, role_name, description, status, created_at, updated_at
+            )
+            VALUES (?, 1, ?, ?, ?, 'active', ?, ?)
+            """,
+            (role_id, code, name, description, now, now),
+        )
+
+    users = [
+        (1, "cashier", "cashier123", "Cashier", 1),
+        (2, "admin", "admin123", "Admin", 0),
+    ]
+    for user_id, username, password, display_name, offline_allowed in users:
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO users (
+                id, organization_id, branch_id, username, password_hash, display_name,
+                status, offline_login_allowed, permission_version, created_at, updated_at
+            )
+            VALUES (?, 1, 1, ?, ?, ?, 'active', ?, ?, ?, ?)
+            """,
+            (user_id, username, hash_password(password), display_name, offline_allowed, LATEST_MIGRATION_ID, now, now),
+        )
+
+    role_permissions = {
+        1: ["auth.login", "session.view", "session.open", "session.close", "device.view"],
+        2: [code for code, _ in permissions],
+    }
+    for role_id, codes in role_permissions.items():
+        for code in codes:
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO role_permissions (role_id, permission_id, created_at)
+                SELECT ?, id, ? FROM permissions WHERE permission_code = ?
+                """,
+                (role_id, now, code),
+            )
+
+    conn.execute("INSERT OR IGNORE INTO user_roles (user_id, role_id, created_at) VALUES (1, 1, ?)", (now,))
+    conn.execute("INSERT OR IGNORE INTO user_roles (user_id, role_id, created_at) VALUES (2, 2, ?)", (now,))
 
 
 def write_startup_state(conn: sqlite3.Connection, startup_status: str) -> None:
@@ -154,7 +243,7 @@ def write_startup_state(conn: sqlite3.Connection, startup_status: str) -> None:
                 current_database_version = ?, startup_status = ?, updated_at = ?
             WHERE id = ?
             """,
-            (now, settings.app_version, MIGRATION_ID, startup_status, now, existing_id["id"]),
+            (now, settings.app_version, LATEST_MIGRATION_ID, startup_status, now, existing_id["id"]),
         )
         return
     conn.execute(
@@ -165,7 +254,7 @@ def write_startup_state(conn: sqlite3.Connection, startup_status: str) -> None:
         )
         VALUES (1, ?, ?, ?, ?, 'unknown', ?, ?)
         """,
-        (now, settings.app_version, MIGRATION_ID, startup_status, now, now),
+        (now, settings.app_version, LATEST_MIGRATION_ID, startup_status, now, now),
     )
 
 
@@ -183,7 +272,7 @@ def database_health() -> dict[str, Any]:
                 "journal_mode": journal_mode.lower(),
                 "foreign_keys": foreign_keys,
                 "database_version": version or "unknown",
-                "migration_status": "ok" if version == MIGRATION_ID else "error",
+                "migration_status": "ok" if version == LATEST_MIGRATION_ID else "error",
                 "required_tables_present": tables_present,
             }
     except Exception as exc:
@@ -197,6 +286,15 @@ def database_health() -> dict[str, Any]:
             "required_tables_present": False,
             "error": _last_init_error or str(exc),
         }
+
+
+def local_device_status() -> str:
+    try:
+        with connect() as conn:
+            row = conn.execute("SELECT status FROM devices ORDER BY id LIMIT 1").fetchone()
+            return row["status"] if row else "not_configured"
+    except Exception:
+        return "error"
 
 
 def latest_migration(conn: sqlite3.Connection) -> str | None:

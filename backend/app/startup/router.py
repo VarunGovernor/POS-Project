@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request
 
 from app.config import settings
 from app.core.responses import success_response
-from app.database.connection import database_health
+from app.database.connection import database_health, local_device_status
 
 router = APIRouter(prefix="/startup", tags=["startup"])
 
@@ -11,6 +11,7 @@ router = APIRouter(prefix="/startup", tags=["startup"])
 async def startup_status(request: Request) -> dict:
     db = database_health()
     db_ok = db["status"] == "ok"
+    device_status = local_device_status()
     return success_response(
         request,
         {
@@ -19,7 +20,7 @@ async def startup_status(request: Request) -> dict:
             "database_status": db["status"],
             "recovery_required": False,
             "migration_status": db["migration_status"],
-            "device_status": "not_configured",
+            "device_status": device_status,
             "license_status": "not_configured",
             "tenant_status": "not_configured",
             "printer_status": "not_configured",
