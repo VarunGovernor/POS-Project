@@ -67,7 +67,7 @@ describe("Phase 8 sync UI", () => {
     });
     render(<SyncScreen />);
     await waitFor(() => expect(screen.getByText("BILL_FINALIZED")).toBeInTheDocument());
-    expect(screen.getByText("development")).toBeInTheDocument();
+    expect(screen.getByText("Offline Ready")).toBeInTheDocument();
     expect(screen.getByText("No sync conflicts.")).toBeInTheDocument();
   });
 

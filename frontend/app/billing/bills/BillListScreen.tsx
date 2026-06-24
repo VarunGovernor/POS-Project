@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { LoadingPanel } from "@/app/components/LoadingPanel";
 import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { FinalBill, localApi } from "@/lib/api/client";
 
@@ -26,11 +27,12 @@ export function BillListScreen() {
     });
   }, []);
 
+  if (state === "loading") return <LoadingPanel title="Bills" />;
+
   return (
     <main>
       <section className="shell panel">
         <div className="header"><h1>Bills</h1><div className="actions screen-nav"><ScreenNavActions /></div></div>
-        {state === "loading" ? <p>Loading.</p> : null}
         {state === "api-unavailable" ? <p className="error-text">API unavailable.</p> : null}
         {state === "error" ? <p className="error-text">{message}</p> : null}
         {state === "ready" && bills.length === 0 ? <p>No bills found.</p> : null}

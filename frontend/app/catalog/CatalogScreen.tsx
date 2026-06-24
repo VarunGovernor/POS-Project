@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
+import { LoadingPanel } from "@/app/components/LoadingPanel";
 import { Department, Doctor, MasterSyncState, ServiceItem, localApi } from "@/lib/api/client";
 
 type State =
@@ -53,6 +54,8 @@ export function CatalogScreen() {
     void load("");
   }, []);
 
+  if (state.name === "loading") return <LoadingPanel title="Catalog" />;
+
   return (
     <main>
       <section className="shell panel">
@@ -61,7 +64,6 @@ export function CatalogScreen() {
           <label><span className="label">Service search</span><input value={query} onChange={(event) => setQuery(event.target.value)} /></label>
           <div className="actions"><button type="submit">Search</button></div>
         </form>
-        {state.name === "loading" ? <p>Loading.</p> : null}
         {state.name === "api-unavailable" ? <p className="error-text">API unavailable.</p> : null}
         {state.name === "permission-denied" ? <p className="error-text">Permission denied.</p> : null}
         {state.name === "error" ? <p className="error-text">{state.message}</p> : null}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { LoadingPanel } from "@/app/components/LoadingPanel";
 import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { Receipt, localApi } from "@/lib/api/client";
 
@@ -26,6 +27,7 @@ export function ReceiptPrintScreen({ receiptId }: { receiptId: string }) {
     try {
       const response = await localApi.printReceipt(token(), receipt.id);
       setJobStatus(response.data.job.status);
+      setMessage("Receipt printed");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Print job failed.");
     }
@@ -37,13 +39,14 @@ export function ReceiptPrintScreen({ receiptId }: { receiptId: string }) {
     try {
       const response = await localApi.reprintReceipt(token(), receipt.id, "Browser print duplicate copy");
       setJobStatus(response.data.job.status);
+      setMessage("Reprint created");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Reprint job failed.");
     }
     window.print();
   }
 
-  if (!receipt) return <main><section className="shell panel"><h1>Receipt</h1><p>{message || "Loading."}</p></section></main>;
+  if (!receipt) return message ? <main><section className="shell panel"><h1>Receipt</h1><p className="error-text">{message}</p></section></main> : <LoadingPanel title="Receipt" />;
 
   return (
     <main>
@@ -54,7 +57,7 @@ export function ReceiptPrintScreen({ receiptId }: { receiptId: string }) {
           <button type="button" onClick={reprint}>Reprint Receipt</button>
           <Link className="button secondary" href="/printer">Printer Queue</Link>
         </div>
-        {message ? <p className="error-text no-print">{message}</p> : null}
+        {message ? <div className={`${message.includes("failed") ? "error-text" : "toast"} no-print`}>{message}</div> : null}
         {jobStatus ? <p className="no-print">Print job {jobStatus}</p> : null}
         <ReceiptPaper receipt={receipt} />
       </section>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { LoadingPanel } from "@/app/components/LoadingPanel";
 import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { BillingContext, Department, Doctor, Patient, localApi } from "@/lib/api/client";
 
@@ -22,11 +23,17 @@ export function NewBillScreen() {
   const [billingContext, setBillingContext] = useState<BillingContext | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "no-session" | "api-unavailable" | "error">("loading");
   const [message, setMessage] = useState("");
+  const [toast, setToast] = useState("");
+  const [missingRegistrationContext, setMissingRegistrationContext] = useState(false);
 
   useEffect(() => {
     const authToken = token();
     const storedContext = localStorage.getItem("counteros_billing_context");
     const context = storedContext ? JSON.parse(storedContext) as BillingContext : null;
+    const pendingToast = sessionStorage.getItem("counteros_toast");
+    sessionStorage.removeItem("counteros_toast");
+    setToast(pendingToast ?? "");
+    setMissingRegistrationContext(!context && window.location.search.includes("from=registration"));
     setBillingContext(context);
     Promise.all([
       localApi.currentSession(authToken),
@@ -68,6 +75,7 @@ export function NewBillScreen() {
         notes: billingContext ? `REGCTX:${JSON.stringify(billingContext)}\n${billingContext.notes}` : "OP visit"
       });
       localStorage.removeItem("counteros_billing_context");
+      sessionStorage.setItem("counteros_toast", "Draft created");
       router.push(`/billing/drafts/${response.data.draft.id}`);
     } catch (error) {
       setState("error");
@@ -75,7 +83,7 @@ export function NewBillScreen() {
     }
   }
 
-  if (state === "loading") return <main><section className="shell panel"><h1>New Bill</h1><p>Loading.</p></section></main>;
+  if (state === "loading") return <LoadingPanel title="New Bill" />;
   if (state === "no-session") return <main><section className="shell panel"><h1>New Bill</h1><p>Open cashier session before creating a bill.</p><Link className="button" href="/session/open">Open Session</Link></section></main>;
   if (state === "api-unavailable") return <main><section className="shell panel"><h1>New Bill</h1><p className="error-text">API unavailable.</p></section></main>;
   if (state === "error") return <main><section className="shell panel"><h1>New Bill</h1><p className="error-text">{message}</p></section></main>;
@@ -87,6 +95,12 @@ export function NewBillScreen() {
           <h1>New Bill</h1>
           <div className="actions screen-nav"><ScreenNavActions /></div>
         </div>
+        {toast ? <div className="toast">{toast}</div> : null}
+        {missingRegistrationContext ? (
+          <div className="toast">
+            Registration context was not found. <Link href="/registrations">Return to Registration Center</Link>
+          </div>
+        ) : null}
         {billingContext ? (
           <div className="toast">
             <strong>Billing from Registration</strong>

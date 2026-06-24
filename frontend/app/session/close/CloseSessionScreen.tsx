@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { LoadingPanel } from "@/app/components/LoadingPanel";
 import { CashierSession, localApi } from "@/lib/api/client";
 
 export function CloseSessionScreen() {
@@ -31,6 +32,7 @@ export function CloseSessionScreen() {
         closing_cash_amount: Number(amount),
         notes
       });
+      sessionStorage.setItem("counteros_toast", "Session closed");
       router.push("/dashboard");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Close session failed.");
@@ -39,7 +41,7 @@ export function CloseSessionScreen() {
     }
   }
 
-  if (loading) return <main><section className="shell panel"><h1>Close Session</h1><p>Loading.</p></section></main>;
+  if (loading) return <LoadingPanel title="Close Session" />;
   if (!session) return <main><section className="shell panel"><h1>Close Session</h1><p>No open cashier session.</p>{message ? <p className="error-text">{message}</p> : null}</section></main>;
 
   return (

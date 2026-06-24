@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { LoadingPanel } from "@/app/components/LoadingPanel";
 import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { BillDraft, ServiceItem, localApi } from "@/lib/api/client";
 
@@ -17,6 +18,7 @@ export function DraftWorkspaceScreen({ draftId }: { draftId: string }) {
   const [serviceId, setServiceId] = useState("");
   const [cashReceived, setCashReceived] = useState("");
   const [message, setMessage] = useState("");
+  const [toast, setToast] = useState("");
   const [state, setState] = useState<"loading" | "ready" | "not-found" | "api-unavailable" | "error">("loading");
 
   async function load() {
@@ -68,6 +70,7 @@ export function DraftWorkspaceScreen({ draftId }: { draftId: string }) {
         received_amount: Number(cashReceived || draft.total_amount || 0),
         notes: "Cash received"
       });
+      sessionStorage.setItem("counteros_toast", "Bill finalized");
       router.push(`/billing/bills/${response.data.bill.id}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Finalize failed.");
@@ -75,10 +78,13 @@ export function DraftWorkspaceScreen({ draftId }: { draftId: string }) {
   }
 
   useEffect(() => {
+    const pendingToast = sessionStorage.getItem("counteros_toast");
+    sessionStorage.removeItem("counteros_toast");
+    setToast(pendingToast ?? "");
     void load();
   }, [draftId]);
 
-  if (state === "loading") return <main><section className="shell panel"><h1>Draft</h1><p>Loading.</p></section></main>;
+  if (state === "loading") return <LoadingPanel title="Draft" />;
   if (state === "not-found") return <main><section className="shell panel"><h1>Draft not found</h1></section></main>;
   if (state === "api-unavailable") return <main><section className="shell panel"><h1>Draft</h1><p className="error-text">API unavailable.</p></section></main>;
   if (state === "error" || !draft) return <main><section className="shell panel"><h1>Draft</h1><p className="error-text">{message}</p></section></main>;
@@ -88,6 +94,7 @@ export function DraftWorkspaceScreen({ draftId }: { draftId: string }) {
     <main>
       <section className="shell panel">
         <div className="header"><h1>Draft {draft.draft_number}</h1><div className="actions screen-nav"><ScreenNavActions /><span className="value">{draft.status}</span></div></div>
+        {toast ? <div className="toast">{toast}</div> : null}
         {draft.status === "voided" ? <p className="error-text">Draft voided.</p> : null}
         {message ? <p className="error-text">{message}</p> : null}
         <p>Autosaved {draft.last_autosaved_at}</p>

@@ -60,7 +60,7 @@ describe("Phase 6 screens", () => {
   test("printer screen renders status and jobs", async () => {
     vi.spyOn(global, "fetch").mockImplementation((input) => String(input).includes("/status") ? ok(status) : ok({ items: [job], page: 1, page_size: 25, total: 1, has_next: false }));
     render(<PrinterScreen />);
-    await waitFor(() => expect(screen.getByText("Development Printer · dev")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Development Printer · Local Printer")).toBeInTheDocument());
     expect(screen.getByText("paper out")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
   });

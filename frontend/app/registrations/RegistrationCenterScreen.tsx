@@ -128,6 +128,7 @@ export function RegistrationCenterScreen() {
     if (!selected) return;
     const response = await localApi.sendRegistrationToBilling(token(), selected.id);
     localStorage.setItem("counteros_billing_context", JSON.stringify(response.data.billing_context));
+    sessionStorage.setItem("counteros_toast", `${selected.registration_number} sent to billing`);
     router.push("/billing/new?from=registration");
   }
 

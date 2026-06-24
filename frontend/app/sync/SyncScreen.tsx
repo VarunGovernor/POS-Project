@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { LoadingPanel } from "@/app/components/LoadingPanel";
 import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { SyncConflict, SyncEvent, SyncStatus, localApi } from "@/lib/api/client";
 
@@ -48,6 +49,7 @@ export function SyncScreen() {
     try {
       await localApi.syncRetryAll(token());
       await load();
+      setMessage("Sync retried");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Retry failed.");
     }
@@ -57,6 +59,7 @@ export function SyncScreen() {
     try {
       await localApi.syncRetryEvent(token(), eventId);
       await load();
+      setMessage("Sync retried");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Retry failed.");
     }
@@ -66,7 +69,7 @@ export function SyncScreen() {
     void load();
   }, []);
 
-  if (state === "loading") return <main><section className="shell panel"><h1>Sync</h1><p>Loading.</p></section></main>;
+  if (state === "loading") return <LoadingPanel title="Sync" />;
   if (state === "api-unavailable") return <main><section className="shell panel"><h1>Sync</h1><p className="error-text">API unavailable.</p></section></main>;
   if (state === "permission-denied") return <main><section className="shell panel"><h1>Sync</h1><p className="error-text">Permission denied.</p></section></main>;
   if (state === "error") return <main><section className="shell panel"><h1>Sync</h1><p className="error-text">{message}</p></section></main>;
@@ -78,12 +81,12 @@ export function SyncScreen() {
           <h1>Sync</h1>
           <div className="actions screen-nav"><ScreenNavActions /><span className="value">{status?.status}</span></div>
         </div>
-        {message ? <p className="error-text">{message}</p> : null}
+        {message ? <div className={message.includes("failed") ? "error-text" : "toast"}>{message}</div> : null}
         <div className="status-grid">
           <div className="status-item"><span className="label">Pending</span><span className="value">{status?.pending_count}</span></div>
           <div className="status-item"><span className="label">Failed</span><span className="value">{(status?.failed_retryable_count ?? 0) + (status?.failed_permanent_count ?? 0)}</span></div>
           <div className="status-item"><span className="label">Conflicts</span><span className="value">{status?.conflict_count}</span></div>
-          <div className="status-item"><span className="label">Adapter</span><span className="value">{status?.adapter}</span></div>
+          <div className="status-item"><span className="label">Adapter</span><span className="value">{adapterLabel(status?.adapter)}</span></div>
           <div className="status-item"><span className="label">Last attempt</span><span className="value">{status?.last_attempt_at ?? "none"}</span></div>
           <div className="status-item"><span className="label">Last success</span><span className="value">{status?.last_successful_sync_at ?? "none"}</span></div>
         </div>
@@ -114,4 +117,8 @@ export function SyncScreen() {
       </section>
     </main>
   );
+}
+
+function adapterLabel(value?: string) {
+  return value === "development" ? "Offline Ready" : value;
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { LoadingPanel } from "@/app/components/LoadingPanel";
 import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { SettingItem, localApi } from "@/lib/api/client";
 
@@ -32,6 +33,7 @@ export function SettingsScreen() {
     try {
       await localApi.updateSetting(token(), { setting_key: item.setting_key, setting_value: value, setting_scope: item.setting_scope });
       await load();
+      setMessage("Setting saved");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Update failed.");
     }
@@ -41,7 +43,7 @@ export function SettingsScreen() {
     void load();
   }, []);
 
-  if (state === "loading") return <main><section className="shell panel"><h1>Settings</h1><p>Loading.</p></section></main>;
+  if (state === "loading") return <LoadingPanel title="Settings" />;
   if (state === "api-unavailable") return <main><section className="shell panel"><h1>Settings</h1><p className="error-text">API unavailable.</p></section></main>;
   if (state === "permission-denied") return <main><section className="shell panel"><h1>Settings</h1><p className="error-text">Permission denied.</p></section></main>;
   if (state === "error") return <main><section className="shell panel"><h1>Settings</h1><p className="error-text">{message}</p></section></main>;
@@ -50,7 +52,7 @@ export function SettingsScreen() {
     <main>
       <section className="shell panel">
         <div className="header"><h1>Settings</h1><div className="actions screen-nav"><ScreenNavActions /><button type="button" onClick={load}>Refresh</button></div></div>
-        {message ? <p className="error-text">{message}</p> : null}
+        {message ? <div className={message.includes("failed") ? "error-text" : "toast"}>{message}</div> : null}
         {items.length === 0 ? <p>No settings.</p> : null}
         <div className="status-grid">
           {items.map((item) => (

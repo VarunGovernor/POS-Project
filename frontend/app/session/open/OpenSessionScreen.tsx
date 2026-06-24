@@ -23,6 +23,7 @@ export function OpenSessionScreen() {
         opening_cash_amount: Number(amount),
         notes
       });
+      sessionStorage.setItem("counteros_toast", "Session opened");
       router.push("/dashboard");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Open session failed.");

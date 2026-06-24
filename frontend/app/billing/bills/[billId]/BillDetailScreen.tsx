@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { LoadingPanel } from "@/app/components/LoadingPanel";
 import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { FinalBill, localApi } from "@/lib/api/client";
 
@@ -13,20 +14,25 @@ function token() {
 export function BillDetailScreen({ billId }: { billId: string }) {
   const [bill, setBill] = useState<FinalBill | null>(null);
   const [message, setMessage] = useState("");
+  const [toast, setToast] = useState("");
 
   useEffect(() => {
+    const pendingToast = sessionStorage.getItem("counteros_toast");
+    sessionStorage.removeItem("counteros_toast");
+    setToast(pendingToast ?? "");
     localApi.bill(token(), billId)
       .then((response) => setBill(response.data.bill))
       .catch((error) => setMessage(error instanceof Error ? error.message : "Bill load failed."));
   }, [billId]);
 
   if (message) return <main><section className="shell panel"><h1>Bill</h1><p className="error-text">{message}</p></section></main>;
-  if (!bill) return <main><section className="shell panel"><h1>Bill</h1><p>Loading.</p></section></main>;
+  if (!bill) return <LoadingPanel title="Bill" />;
 
   return (
     <main>
       <section className="shell panel">
         <div className="header"><h1>{bill.bill_number}</h1><div className="actions screen-nav"><ScreenNavActions /><span className="value">{bill.sync_status}</span></div></div>
+        {toast ? <div className="toast">{toast}</div> : null}
         <p>{bill.patient?.full_name}</p>
         <div className="status-grid">
           {(bill.items ?? []).map((item) => (

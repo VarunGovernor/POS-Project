@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+import { LoadingPanel } from "@/app/components/LoadingPanel";
 import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { Receipt, localApi } from "@/lib/api/client";
 import { ReceiptPaper } from "@/app/receipts/[receiptId]/print/ReceiptPrintScreen";
@@ -28,6 +29,7 @@ export function ReceiptPreviewScreen({ billId }: { billId: string }) {
     try {
       const response = await localApi.printReceipt(token(), receipt.id);
       setJobStatus(response.data.job.status);
+      setMessage("Receipt printed");
       window.print();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Print failed.");
@@ -40,13 +42,14 @@ export function ReceiptPreviewScreen({ billId }: { billId: string }) {
     try {
       const response = await localApi.reprintReceipt(token(), receipt.id, "Customer requested duplicate copy");
       setJobStatus(response.data.job.status);
+      setMessage("Reprint created");
       window.print();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Reprint failed.");
     }
   }
 
-  if (!receipt) return <main><section className="shell panel"><h1>Receipt</h1><p>Loading.</p></section></main>;
+  if (!receipt) return <LoadingPanel title="Receipt" />;
 
   return (
     <main>
@@ -56,7 +59,7 @@ export function ReceiptPreviewScreen({ billId }: { billId: string }) {
           <div className="actions screen-nav"><ScreenNavActions /></div>
         </div>
         <ReceiptPaper receipt={receipt} />
-        {message ? <p className="error-text">{message}</p> : null}
+        {message ? <div className={message.includes("failed") || message.includes("PRINTER") ? "error-text" : "toast"}>{message}</div> : null}
         {jobStatus ? <p>Print job {jobStatus}</p> : null}
         <div className="actions no-print">
           <Link className="button secondary" href={`/receipts/${receipt.id}/print`}>View Printable Receipt</Link>

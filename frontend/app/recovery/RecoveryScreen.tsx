@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { LoadingPanel } from "@/app/components/LoadingPanel";
 import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { RecoveryMarker, RecoveryStatus, localApi } from "@/lib/api/client";
 
@@ -38,6 +39,7 @@ export function RecoveryScreen() {
     try {
       await localApi.recoveryScan(token());
       await load();
+      setMessage("Recovery scan completed");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Scan failed.");
     }
@@ -56,7 +58,7 @@ export function RecoveryScreen() {
     void load();
   }, []);
 
-  if (state === "loading") return <main><section className="shell panel"><h1>Recovery</h1><p>Loading.</p></section></main>;
+  if (state === "loading") return <LoadingPanel title="Recovery" />;
   if (state === "api-unavailable") return <main><section className="shell panel"><h1>Recovery</h1><p className="error-text">API unavailable.</p></section></main>;
   if (state === "permission-denied") return <main><section className="shell panel"><h1>Recovery</h1><p className="error-text">Permission denied.</p></section></main>;
   if (state === "error") return <main><section className="shell panel"><h1>Recovery</h1><p className="error-text">{message}</p></section></main>;
@@ -68,7 +70,7 @@ export function RecoveryScreen() {
           <h1>Recovery</h1>
           <div className="actions screen-nav"><ScreenNavActions /><span className="value">{status?.recovery_required ? "required" : "ok"}</span></div>
         </div>
-        {message ? <p className="error-text">{message}</p> : null}
+        {message ? <div className={message.includes("failed") ? "error-text" : "toast"}>{message}</div> : null}
         <div className="status-grid">
           <div className="status-item"><span className="label">Open markers</span><span className="value">{status?.open_marker_count}</span></div>
           <div className="status-item"><span className="label">Critical</span><span className="value">{status?.critical_count}</span></div>

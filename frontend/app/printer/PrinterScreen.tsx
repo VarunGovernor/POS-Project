@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { LoadingPanel } from "@/app/components/LoadingPanel";
 import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { PrinterJob, PrinterStatus, localApi } from "@/lib/api/client";
 
@@ -37,6 +38,7 @@ export function PrinterScreen() {
     try {
       await localApi.printerTest(token());
       await load();
+      setMessage("Receipt printed");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Test print failed.");
     }
@@ -46,6 +48,7 @@ export function PrinterScreen() {
     try {
       await localApi.retryPrinterJob(token(), jobId);
       await load();
+      setMessage("Print job retried");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Retry failed.");
     }
@@ -55,7 +58,7 @@ export function PrinterScreen() {
     void load();
   }, []);
 
-  if (state === "loading") return <main><section className="shell panel"><h1>Printer</h1><p>Loading.</p></section></main>;
+  if (state === "loading") return <LoadingPanel title="Printer" />;
   if (state === "api-unavailable") return <main><section className="shell panel"><h1>Printer</h1><p className="error-text">API unavailable.</p></section></main>;
   if (state === "error") return <main><section className="shell panel"><h1>Printer</h1><p className="error-text">{message}</p></section></main>;
 
@@ -66,9 +69,9 @@ export function PrinterScreen() {
           <h1>Printer</h1>
           <div className="actions screen-nav"><ScreenNavActions /><span className="value">{status?.status}</span></div>
         </div>
-        {message ? <p className="error-text">{message}</p> : null}
+        {message ? <div className={message.includes("failed") ? "error-text" : "toast"}>{message}</div> : null}
         {status?.status === "not_configured" ? <p className="error-text">Printer not configured.</p> : null}
-        {status?.printer ? <p>{status.printer.printer_name} · {status.printer.printer_type}</p> : null}
+        {status?.printer ? <p>{status.printer.printer_name} · {printerType(status.printer.printer_type)}</p> : null}
         <div className="actions"><button type="button" onClick={testPrint}>Test Print</button><button type="button" onClick={load}>Refresh</button></div>
         {jobs.length === 0 ? <p>No printer jobs.</p> : null}
         <div className="status-grid">
@@ -85,4 +88,8 @@ export function PrinterScreen() {
       </section>
     </main>
   );
+}
+
+function printerType(value: string) {
+  return value === "dev" || value === "development" ? "Local Printer" : value;
 }

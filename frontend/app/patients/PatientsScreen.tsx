@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
+import { LoadingPanel } from "@/app/components/LoadingPanel";
 import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { Patient, localApi } from "@/lib/api/client";
 
@@ -43,6 +44,8 @@ export function PatientsScreen() {
     void load("");
   }, []);
 
+  if (state.name === "loading") return <LoadingPanel title="Patients" />;
+
   return (
     <main>
       <section className="shell panel">
@@ -57,7 +60,6 @@ export function PatientsScreen() {
           <label><span className="label">Search</span><input value={query} onChange={(event) => setQuery(event.target.value)} /></label>
           <div className="actions"><button type="submit">Search</button></div>
         </form>
-        {state.name === "loading" ? <p>Loading.</p> : null}
         {state.name === "api-unavailable" ? <p className="error-text">API unavailable.</p> : null}
         {state.name === "permission-denied" ? <p className="error-text">Permission denied.</p> : null}
         {state.name === "error" ? <p className="error-text">{state.message}</p> : null}

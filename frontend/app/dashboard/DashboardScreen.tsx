@@ -20,6 +20,7 @@ function token() {
 export function DashboardScreen() {
   const router = useRouter();
   const [state, setState] = useState<State>({ name: "loading" });
+  const [toast, setToast] = useState("");
 
   async function load() {
     setState({ name: "loading" });
@@ -46,6 +47,9 @@ export function DashboardScreen() {
   }
 
   useEffect(() => {
+    const pendingToast = sessionStorage.getItem("counteros_toast");
+    sessionStorage.removeItem("counteros_toast");
+    setToast(pendingToast ?? "");
     void load();
   }, []);
 
@@ -67,6 +71,7 @@ export function DashboardScreen() {
             <button type="button" onClick={logout}>Logout</button>
           </div>
         </div>
+        {toast ? <div className="toast">{toast}</div> : null}
         <div className="status-grid">
           <div className="status-item"><span className="label">User</span><span className="value">{state.me.user.display_name}</span></div>
           <div className="status-item"><span className="label">Device</span><span className="value">{state.device.device_name}</span></div>

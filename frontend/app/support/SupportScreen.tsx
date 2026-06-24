@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { LoadingPanel } from "@/app/components/LoadingPanel";
 import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { SupportStatus, localApi } from "@/lib/api/client";
 
@@ -41,7 +42,7 @@ export function SupportScreen() {
     void load();
   }, []);
 
-  if (state === "loading") return <main><section className="shell panel"><h1>Support</h1><p>Loading.</p></section></main>;
+  if (state === "loading") return <LoadingPanel title="Support" />;
   if (state === "api-unavailable") return <main><section className="shell panel"><h1>Support</h1><p className="error-text">API unavailable.</p></section></main>;
   if (state === "permission-denied") return <main><section className="shell panel"><h1>Support</h1><p className="error-text">Permission denied.</p></section></main>;
   if (state === "error") return <main><section className="shell panel"><h1>Support</h1><p className="error-text">{message}</p></section></main>;
