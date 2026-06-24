@@ -1,8 +1,8 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "CounterOS",
-  description: "POS Appliance Platform"
+  title: "HamTech POS OS",
+  description: "Hospital POS"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

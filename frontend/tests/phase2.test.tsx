@@ -119,7 +119,7 @@ describe("Phase 2 screens", () => {
     render(<DashboardScreen />);
 
     await waitFor(() => expect(screen.getByText("Cashier")).toBeInTheDocument());
-    expect(screen.getByText("Development Device")).toBeInTheDocument();
+    expect(screen.getByText("POS Terminal")).toBeInTheDocument();
     expect(screen.getByText("open")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Close Session" })).toHaveAttribute("href", "/session/close");
   });

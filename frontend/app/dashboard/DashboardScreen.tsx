@@ -63,7 +63,7 @@ export function DashboardScreen() {
       <section className="shell panel">
         <div className="header">
           <div>
-            <span className="chip">CounterOS Hospital</span>
+            <span className="chip">Hospital POS</span>
             <h1>Dashboard</h1>
           </div>
           <div className="actions">
@@ -74,8 +74,8 @@ export function DashboardScreen() {
         {toast ? <div className="toast">{toast}</div> : null}
         <div className="status-grid">
           <div className="status-item"><span className="label">User</span><span className="value">{state.me.user.display_name}</span></div>
-          <div className="status-item"><span className="label">Device</span><span className="value">{state.device.device_name}</span></div>
-          <div className="status-item"><span className="label">Counter</span><span className="value">{state.device.counter_name}</span></div>
+          <div className="status-item"><span className="label">Device</span><span className="value">{clientDevice(state.device.device_name)}</span></div>
+          <div className="status-item"><span className="label">Counter</span><span className="value">{clientCounter(state.device.counter_name)}</span></div>
           <div className="status-item"><span className="label">Cashier session</span><span className="value">{state.session ? state.session.status : "none"}</span></div>
         </div>
         <div className="actions">
@@ -99,6 +99,14 @@ export function DashboardScreen() {
       </section>
     </main>
   );
+}
+
+function clientDevice(value: string) {
+  return value.includes("Development") ? "POS Terminal" : value;
+}
+
+function clientCounter(value: string) {
+  return value.includes("Development") ? "OP Counter 1" : value;
 }
 
 function Module({ href, title, text, primary = false, featured = false }: { href: string; title: string; text: string; primary?: boolean; featured?: boolean }) {

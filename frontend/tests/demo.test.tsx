@@ -17,6 +17,16 @@ describe("client demo route", () => {
     await userEvent.click(screen.getByRole("button", { name: "Start Demo" }));
     expect(screen.getByRole("heading", { name: "Select POS System" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Hospital POS/ })).toBeInTheDocument();
+    expect(screen.getAllByText("Coming Soon").length).toBeGreaterThan(0);
+  });
+
+  test("future POS cards do not open dashboards", async () => {
+    render(<DemoPage />);
+    await userEvent.click(screen.getByRole("button", { name: "Start Demo" }));
+    await userEvent.click(screen.getByRole("button", { name: /Restaurant POS/ }));
+    expect(screen.getByText("This POS vertical is planned for a future rollout.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Select POS System" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "New Order" })).not.toBeInTheDocument();
   });
 
   test("selecting Hospital POS opens dashboard", async () => {

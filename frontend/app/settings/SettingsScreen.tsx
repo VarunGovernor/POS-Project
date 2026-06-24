@@ -62,7 +62,7 @@ export function SettingsScreen() {
               void save(item, value);
             }}>
               <span className="label">{item.setting_key}</span>
-              <input name="value" defaultValue={item.setting_value} disabled={item.is_readonly} />
+              <input name="value" defaultValue={clientSettingValue(item.setting_value)} disabled={item.is_readonly} />
               <span className="value">{item.is_readonly ? "readonly" : item.setting_scope}</span>
               {!item.is_readonly ? <button type="submit">Save</button> : null}
             </form>
@@ -71,4 +71,11 @@ export function SettingsScreen() {
       </section>
     </main>
   );
+}
+
+function clientSettingValue(value: string) {
+  if (value === "CounterOS Hospital") return "HamTech POS OS";
+  if (value.includes("CounterOS")) return value.replaceAll("CounterOS", "HamTech POS OS");
+  if (value === "development") return "Offline Ready";
+  return value;
 }

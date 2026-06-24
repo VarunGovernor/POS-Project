@@ -71,7 +71,7 @@ export function PrinterScreen() {
         </div>
         {message ? <div className={message.includes("failed") ? "error-text" : "toast"}>{message}</div> : null}
         {status?.status === "not_configured" ? <p className="error-text">Printer not configured.</p> : null}
-        {status?.printer ? <p>{status.printer.printer_name} · {printerType(status.printer.printer_type)}</p> : null}
+        {status?.printer ? <p>{printerLabel(status.printer.printer_name, status.printer.printer_type)}</p> : null}
         <div className="actions"><button type="button" onClick={testPrint}>Test Print</button><button type="button" onClick={load}>Refresh</button></div>
         {jobs.length === 0 ? <p>No printer jobs.</p> : null}
         <div className="status-grid">
@@ -92,4 +92,14 @@ export function PrinterScreen() {
 
 function printerType(value: string) {
   return value === "dev" || value === "development" ? "Local Printer" : value;
+}
+
+function printerName(value: string) {
+  return value.includes("Development") ? "Local Printer" : value;
+}
+
+function printerLabel(name: string, type: string) {
+  const cleanName = printerName(name);
+  const cleanType = printerType(type);
+  return cleanName === cleanType ? cleanName : `${cleanName} · ${cleanType}`;
 }

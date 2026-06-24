@@ -57,8 +57,8 @@ describe("Phase 9 operations UI", () => {
       return ok({ items: [{ id: "2", setting_key: "receipt.header", setting_value: "CounterOS Hospital", setting_scope: "device", is_readonly: false }, { id: "1", setting_key: "environment", setting_value: "development", setting_scope: "device", is_readonly: true }] });
     });
     render(<SettingsScreen />);
-    await waitFor(() => expect(screen.getByDisplayValue("CounterOS Hospital")).toBeInTheDocument());
-    const input = screen.getByDisplayValue("CounterOS Hospital");
+    await waitFor(() => expect(screen.getByDisplayValue("HamTech POS OS")).toBeInTheDocument());
+    const input = screen.getByDisplayValue("HamTech POS OS");
     await userEvent.clear(input);
     await userEvent.type(input, "Updated");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
