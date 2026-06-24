@@ -62,7 +62,8 @@ export function StartupScreen() {
     return (
       <main>
         <section className="shell panel" aria-live="polite">
-          <h1>Startup</h1>
+          <span className="chip">Internal diagnostics</span>
+          <h1>System Status</h1>
           <p>Checking local appliance status.</p>
         </section>
       </main>
@@ -126,7 +127,10 @@ export function StartupScreen() {
     <main>
       <section className="shell panel">
         <div className="header">
-          <h1>Startup</h1>
+          <div>
+            <span className="chip">Internal diagnostics</span>
+            <h1>System Status</h1>
+          </div>
           <span className="value">API {version.api_version}</span>
         </div>
         <div className="status-grid">

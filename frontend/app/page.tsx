@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { ClientEntryScreen } from "./ClientEntryScreen";
 
 export default function HomePage() {
-  redirect("/startup");
+  return <ClientEntryScreen />;
 }

@@ -91,6 +91,8 @@ describe("StartupScreen", () => {
 
     render(<StartupScreen />);
 
+    expect(screen.getByText("Internal diagnostics")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "System Status" })).toBeInTheDocument();
     expect(screen.getByText("Checking local appliance status.")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Startup status")).toBeInTheDocument());
     expect(screen.getByText("ready")).toBeInTheDocument();
