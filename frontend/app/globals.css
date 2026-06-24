@@ -180,14 +180,68 @@ button:disabled {
 
 .module-grid {
   display: grid;
-  gap: 14px;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-top: 22px;
 }
 
 .module-card {
-  min-height: 132px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(18, 48, 71, 0.08);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: flex-start;
+  min-height: 120px;
+  padding: 18px;
   text-align: left;
+  text-decoration: none;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: normal;
+  line-height: 1.35;
+}
+
+.module-card.primary {
+  background: linear-gradient(135deg, rgba(18, 48, 71, 0.94), rgba(15, 118, 110, 0.9));
+  border-color: rgba(15, 118, 110, 0.34);
+  color: #ffffff;
+}
+
+.module-card:hover {
+  border-color: rgba(15, 118, 110, 0.28);
+  box-shadow: 0 16px 36px rgba(18, 48, 71, 0.13);
+  transform: translateY(-2px);
+}
+
+.module-card .label,
+.module-card .value,
+.module-card p {
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: normal;
+  line-height: 1.35;
+}
+
+.module-card .label {
+  margin-bottom: 0;
+}
+
+.module-card .value {
+  font-size: 20px;
+}
+
+.module-card p {
+  margin: 0;
+}
+
+.module-card.primary .label,
+.module-card.primary p {
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .chip {
@@ -260,6 +314,16 @@ button:disabled {
 
   .split-grid {
     grid-template-columns: 1fr;
+  }
+
+  .module-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 980px) {
+  .module-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

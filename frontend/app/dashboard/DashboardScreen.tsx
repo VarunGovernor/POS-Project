@@ -98,7 +98,7 @@ export function DashboardScreen() {
 
 function Module({ href, title, text, primary = false }: { href: string; title: string; text: string; primary?: boolean }) {
   return (
-    <Link className={`status-item module-card ${primary ? "button" : "button secondary"}`} href={href}>
+    <Link className={`module-card ${primary ? "primary" : ""}`} href={href}>
       <span className="label">{primary ? "Primary" : "Module"}</span>
       <span className="value">{title}</span>
       <p>{text}</p>
