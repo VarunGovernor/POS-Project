@@ -49,7 +49,7 @@ export function DashboardScreen() {
     void load();
   }, []);
 
-  if (state.name === "loading") return <main><section className="shell panel"><h1>Dashboard</h1><p>Loading.</p></section></main>;
+  if (state.name === "loading") return <main><section className="shell panel"><h1>Dashboard</h1><div className="status-grid" aria-label="Loading dashboard"><div className="skeleton" /><div className="skeleton" /><div className="skeleton" /></div></section></main>;
   if (state.name === "api-unavailable") return <main><section className="shell panel"><h1>API unavailable</h1><button onClick={load}>Refresh</button></section></main>;
   if (state.name === "permission-denied") return <main><section className="shell panel"><h1>Permission denied</h1><p className="error-text">{state.message}</p></section></main>;
   if (state.name === "error") return <main><section className="shell panel"><h1>Dashboard error</h1><p className="error-text">{state.message}</p></section></main>;
@@ -58,8 +58,14 @@ export function DashboardScreen() {
     <main>
       <section className="shell panel">
         <div className="header">
-          <h1>Dashboard</h1>
-          <button type="button" onClick={load}>Refresh</button>
+          <div>
+            <span className="chip">CounterOS Hospital</span>
+            <h1>Dashboard</h1>
+          </div>
+          <div className="actions">
+            <button type="button" onClick={load}>Refresh</button>
+            <button type="button" onClick={logout}>Logout</button>
+          </div>
         </div>
         <div className="status-grid">
           <div className="status-item"><span className="label">User</span><span className="value">{state.me.user.display_name}</span></div>
@@ -70,21 +76,32 @@ export function DashboardScreen() {
         <div className="actions">
           {!state.session ? <Link className="button" href="/session/open">Open Session</Link> : null}
           {state.session ? <Link className="button" href="/session/close">Close Session</Link> : null}
-          <Link className="button secondary" href="/patients">Patient Lookup</Link>
-          <Link className="button secondary" href="/catalog">Catalog Lookup</Link>
-          <Link className="button" href="/billing/new">New Bill</Link>
-          <Link className="button secondary" href="/billing/drafts">Drafts</Link>
-          <Link className="button secondary" href="/billing/bills">Bills</Link>
-          <Link className="button secondary" href="/printer">Printer</Link>
-          <Link className="button secondary" href="/recovery">Recovery</Link>
-          <Link className="button secondary" href="/sync">Sync</Link>
-          <Link className="button secondary" href="/reports">Reports</Link>
-          <Link className="button secondary" href="/settings">Settings</Link>
-          <Link className="button secondary" href="/support">Support</Link>
-          <Link className="button secondary" href="/audit">Audit</Link>
-          <button type="button" onClick={logout}>Logout</button>
+        </div>
+        <div className="module-grid">
+          <Module href="/registrations" title="Registration Center" text="OP, IP, emergency, follow-up, lab, pharmacy walk-in" primary />
+          <Module href="/patients" title="Patient Lookup" text="Find or create patient records" />
+          <Module href="/billing/new" title="New Bill" text="Create a draft bill" primary />
+          <Module href="/billing/drafts" title="Drafts" text="Resume draft bills" />
+          <Module href="/billing/bills" title="Bills" text="Final bills and receipts" />
+          <Module href="/printer" title="Printer" text="Receipt printer queue" />
+          <Module href="/sync" title="Sync" text="Local sync status" />
+          <Module href="/recovery" title="Recovery" text="Crash recovery work items" />
+          <Module href="/reports" title="Reports" text="Daily collections" />
+          <Module href="/settings" title="Settings" text="Device settings" />
+          <Module href="/support" title="Support" text="Support bundle and health" />
+          <Module href="/audit" title="Audit" text="Local audit trail" />
         </div>
       </section>
     </main>
+  );
+}
+
+function Module({ href, title, text, primary = false }: { href: string; title: string; text: string; primary?: boolean }) {
+  return (
+    <Link className={`status-item module-card ${primary ? "button" : "button secondary"}`} href={href}>
+      <span className="label">{primary ? "Primary" : "Module"}</span>
+      <span className="value">{title}</span>
+      <p>{text}</p>
+    </Link>
   );
 }

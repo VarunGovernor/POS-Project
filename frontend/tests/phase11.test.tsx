@@ -48,14 +48,14 @@ describe("Phase 11 hardening UI", () => {
 
     const expected = [
       "/session/open",
+      "/registrations",
       "/patients",
-      "/catalog",
       "/billing/new",
       "/billing/drafts",
       "/billing/bills",
       "/printer",
-      "/recovery",
       "/sync",
+      "/recovery",
       "/reports",
       "/settings",
       "/support",

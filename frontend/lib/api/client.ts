@@ -351,6 +351,51 @@ export type AuditLog = {
   created_at: string;
 };
 
+export type RegistrationType = "op" | "ip" | "emergency" | "follow_up" | "lab" | "pharmacy_walkin";
+
+export type Registration = {
+  id: string;
+  registration_number: string;
+  registration_type: RegistrationType;
+  patient_id: string | null;
+  patient_name: string;
+  mobile_number: string | null;
+  age_years: number | null;
+  gender: string | null;
+  department_id: string | null;
+  department_name: string | null;
+  doctor_id: string | null;
+  doctor_name: string | null;
+  visit_type: string | null;
+  token_number: string | null;
+  admission_number: string | null;
+  ward: string | null;
+  room_or_bed: string | null;
+  attender_name: string | null;
+  deposit_amount: number | null;
+  priority: string | null;
+  sample_status: string | null;
+  prescription_reference: string | null;
+  status: string;
+  billing_status: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BillingContext = {
+  registration_id: string;
+  registration_number: string;
+  registration_type: RegistrationType;
+  patient_name: string;
+  patient_id: string | null;
+  department_id: string | null;
+  doctor_id: string | null;
+  department_name?: string | null;
+  doctor_name?: string | null;
+  notes: string;
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_COUNTEROS_API_BASE_URL?.replace(/\/api\/v1$/, "") ?? process.env.NEXT_PUBLIC_LOCAL_API_URL ?? "http://127.0.0.1:8000";
 
 type RequestOptions = {
@@ -487,5 +532,18 @@ export const localApi = {
   supportStatus: (token: string | null) => request<SupportStatus>("/api/v1/support/status", { token }),
   supportBundle: (token: string | null) => request<{ bundle: { bundle_id: string; status: string; file_path: string; created_at: string } }>("/api/v1/support/bundle", { method: "POST", token }),
   auditLogs: (token: string | null) =>
-    request<{ items: AuditLog[]; page: number; page_size: number; total: number; has_next: boolean }>("/api/v1/audit/logs", { token })
+    request<{ items: AuditLog[]; page: number; page_size: number; total: number; has_next: boolean }>("/api/v1/audit/logs", { token }),
+  registrations: (token: string | null, params: { registration_type?: string; q?: string } = {}) => {
+    const query = new URLSearchParams();
+    if (params.registration_type) query.set("registration_type", params.registration_type);
+    if (params.q) query.set("q", params.q);
+    const suffix = query.toString() ? `?${query}` : "";
+    return request<{ items: Registration[]; page: number; page_size: number; total: number; has_next: boolean }>(`/api/v1/registrations${suffix}`, { token });
+  },
+  createRegistration: (token: string | null, body: Record<string, unknown>) =>
+    request<{ registration: Registration }>("/api/v1/registrations", { method: "POST", token, body }),
+  checkInRegistration: (token: string | null, registrationId: string) =>
+    request<{ registration: Registration }>(`/api/v1/registrations/${registrationId}/check-in`, { method: "POST", token }),
+  sendRegistrationToBilling: (token: string | null, registrationId: string) =>
+    request<{ registration: Registration; billing_context: BillingContext }>(`/api/v1/registrations/${registrationId}/send-to-billing`, { method: "POST", token })
 };

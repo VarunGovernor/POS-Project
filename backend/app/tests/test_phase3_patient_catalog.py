@@ -145,9 +145,11 @@ def test_catalog_departments_doctors_and_master_sync_state(client: TestClient) -
     sync_state = client.get("/api/v1/catalog/master-sync-state", headers=auth(token))
 
     assert departments.status_code == 200
-    assert len(departments.json()["data"]["items"]) == 3
+    department_names = {item["department_name"] for item in departments.json()["data"]["items"]}
+    assert {"General Medicine", "Laboratory", "Pharmacy", "Emergency"}.issubset(department_names)
     assert doctors.status_code == 200
-    assert doctors.json()["data"]["items"][0]["full_name"] == "Dr. Dev General"
+    doctor_names = {item["full_name"] for item in doctors.json()["data"]["items"]}
+    assert {"Dr. Dev General", "Dr. Sharma"}.issubset(doctor_names)
     assert sync_state.status_code == 200
     assert len(sync_state.json()["data"]["items"]) >= 5
 

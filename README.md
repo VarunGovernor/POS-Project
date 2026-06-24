@@ -81,6 +81,10 @@ scripts/dev/run-backend.sh
 scripts/dev/run-frontend.sh
 ```
 
+Local CORS defaults allow `http://127.0.0.1:3000` and `http://localhost:3000`.
+Override with comma-separated `COUNTEROS_CORS_ORIGINS` when needed. Do not use
+wildcard origins for production.
+
 ## Demo Start
 
 ```sh
@@ -143,12 +147,18 @@ fresh local database.
 
 ## Demo And Deployment Docs
 
+- Client Demo HTML: `docs/demo/hamtech-pos-os-client-demo.html`
 - `docs/demo/DEMO_WALKTHROUGH.md`
 - `docs/demo/DEMO_CHECKLIST.md`
 - `docs/deployment/DEPLOYMENT_READINESS_CHECKLIST.md`
 - `docs/deployment/LOCAL_LINUX_DEPLOYMENT_NOTES.md`
+- `docs/deployment/LIGHTSAIL_DEPLOYMENT.md`
 - `docs/handover/DEVELOPER_HANDOVER.md`
 - `docs/handover/CLIENT_DEMO_GUIDE.md`
+
+`docs/demo/hamtech-pos-os-client-demo.html` is a standalone visual demo for
+client presentation. It opens directly in a browser and does not replace the
+working MVP application.
 
 ## Backup And Restore
 

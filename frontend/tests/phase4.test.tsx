@@ -60,6 +60,29 @@ describe("Phase 4 screens", () => {
     expect(screen.getByText("Ravi Kumar")).toBeInTheDocument();
   });
 
+  test("new bill uses registration billing context", async () => {
+    localStorage.setItem("counteros_billing_context", JSON.stringify({ registration_id: "10", registration_number: "OP-1010", registration_type: "op", patient_name: "Registration Patient", patient_id: null, department_id: "1", doctor_id: "1", department_name: "General Medicine", doctor_name: "Dr. Dev General", notes: "From OP Registration OP-1010" }));
+    const fetchMock = vi.spyOn(global, "fetch").mockImplementation((input, init) => {
+      const url = String(input);
+      if (url.includes("/api/v1/sessions/current")) return ok({ session: { id: "1" } });
+      if (url.includes("/api/v1/patients") && init?.method === "POST") return ok({ patient });
+      if (url.includes("/api/v1/patients")) return ok({ items: [], page: 1, page_size: 25, total: 0, has_next: false });
+      if (url.includes("/api/v1/catalog/departments")) return ok({ items: [department] });
+      if (url.includes("/api/v1/bills/drafts")) return ok({ draft });
+      return ok({ items: [doctor] });
+    });
+
+    render(<NewBillScreen />);
+    await waitFor(() => expect(screen.getByText("Billing from registration")).toBeInTheDocument());
+    await userEvent.click(screen.getByRole("button", { name: "Create Draft" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/api/v1/bills/drafts",
+      expect.objectContaining({ method: "POST" })
+    ));
+    expect(push).toHaveBeenCalledWith("/billing/drafts/1");
+  });
+
   test("new bill no active session state renders", async () => {
     vi.spyOn(global, "fetch").mockImplementation((input) => {
       const url = String(input);

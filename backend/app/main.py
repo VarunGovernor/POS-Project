@@ -3,7 +3,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 
+from app.config import settings
 from app.core.errors import AppError
 from app.core.logging import configure_logging
 from app.core.request_id import RequestIdMiddleware
@@ -19,6 +21,7 @@ from app.patients.router import router as patients_router
 from app.printer.router import receipt_router as printer_receipt_router, router as printer_router
 from app.recovery.repository import scan_recovery
 from app.recovery.router import router as recovery_router
+from app.registration.router import router as registration_router
 from app.sessions.router import router as sessions_router
 from app.startup.router import router as startup_router
 from app.sync.router import router as sync_router
@@ -39,6 +42,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="CounterOS Local API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(RequestIdMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_cors_origins(),
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Idempotency-Key"],
+)
 
 api_prefix = "/api/v1"
 app.include_router(auth_router, prefix=api_prefix)
@@ -52,6 +62,7 @@ app.include_router(patients_router, prefix=api_prefix)
 app.include_router(printer_router, prefix=api_prefix)
 app.include_router(printer_receipt_router, prefix=api_prefix)
 app.include_router(recovery_router, prefix=api_prefix)
+app.include_router(registration_router, prefix=api_prefix)
 app.include_router(receipts_router, prefix=api_prefix)
 app.include_router(sessions_router, prefix=api_prefix)
 app.include_router(startup_router, prefix=api_prefix)

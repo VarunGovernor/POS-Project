@@ -8,10 +8,10 @@ from typing import Any
 
 from app.config import settings
 from app.auth.security import hash_password
-from app.database.migrations import phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing, phase_6_printer_jobs, phase_7_recovery_foundation, phase_8_sync_foundation, phase_9_reports_support
+from app.database.migrations import phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing, phase_6_printer_jobs, phase_7_recovery_foundation, phase_8_sync_foundation, phase_9_reports_support, phase_13_hospital_registration
 
-MIGRATIONS = [phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing, phase_6_printer_jobs, phase_7_recovery_foundation, phase_8_sync_foundation, phase_9_reports_support]
-LATEST_MIGRATION_ID = phase_9_reports_support.MIGRATION_ID
+MIGRATIONS = [phase_1_initial_schema, phase_2_auth_sessions, phase_3_patient_catalog, phase_4_draft_billing, phase_5_final_billing, phase_6_printer_jobs, phase_7_recovery_foundation, phase_8_sync_foundation, phase_9_reports_support, phase_13_hospital_registration]
+LATEST_MIGRATION_ID = phase_13_hospital_registration.MIGRATION_ID
 MIGRATION_ID = LATEST_MIGRATION_ID
 
 REQUIRED_TABLES = {
@@ -51,6 +51,8 @@ REQUIRED_TABLES = {
     "printer_jobs",
     "recovery_markers",
     "support_bundles",
+    "hospital_registrations",
+    "hospital_registration_events",
 }
 
 _init_lock = Lock()
@@ -246,6 +248,10 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
         ("recovery.view", "View recovery"),
         ("recovery.resolve", "Resolve recovery markers"),
         ("recovery.scan", "Run recovery scan"),
+        ("registration.view", "View registrations"),
+        ("registration.create", "Create registrations"),
+        ("registration.update", "Update registrations"),
+        ("registration.send_to_billing", "Send registrations to billing"),
     ]
     for code, name in permissions:
         conn.execute(
@@ -325,6 +331,10 @@ def seed_phase_2_data(conn: sqlite3.Connection, now: str) -> None:
             "printer.job.retry",
             "recovery.view",
             "recovery.scan",
+            "registration.view",
+            "registration.create",
+            "registration.update",
+            "registration.send_to_billing",
         ],
         2: [code for code, _ in permissions],
     }
@@ -370,6 +380,9 @@ def seed_phase_3_data(conn: sqlite3.Connection, now: str) -> None:
         (1, "GEN-MED", "General Medicine"),
         (2, "LAB", "Laboratory"),
         (3, "PHARM", "Pharmacy"),
+        (4, "PEDS", "Pediatrics"),
+        (5, "ORTHO", "Orthopedics"),
+        (6, "ER", "Emergency"),
     ]
     for department_id, code, name in departments:
         conn.execute(
@@ -392,6 +405,23 @@ def seed_phase_3_data(conn: sqlite3.Connection, now: str) -> None:
         """,
         (now, now),
     )
+    doctors = [
+        (2, 4, "DR-PED-1", "Dr. Mehta", "Pediatrics"),
+        (3, 5, "DR-ORTH-1", "Dr. Reddy", "Orthopedics"),
+        (4, 1, "DR-GEN-2", "Dr. Sharma", "General Medicine"),
+        (5, 6, "DR-ER-1", "Dr. Iyer", "Emergency Medicine"),
+    ]
+    for doctor_id, department_id, code, name, specialization in doctors:
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO doctors (
+                id, organization_id, branch_id, department_id, doctor_code, full_name,
+                specialization, status, created_at, updated_at
+            )
+            VALUES (?, 1, 1, ?, ?, ?, ?, 'active', ?, ?)
+            """,
+            (doctor_id, department_id, code, name, specialization, now, now),
+        )
 
     services = [
         (1, 1, "OP-CONSULT", "OP Consultation", "op"),
@@ -454,6 +484,58 @@ def seed_phase_3_data(conn: sqlite3.Connection, now: str) -> None:
             VALUES (1, 1, ?, 'DEV-001', NULL, 'local_seeded', ?, ?)
             """,
             (master_type, now, now),
+        )
+
+    seed_phase_13_data(conn, now)
+
+
+def seed_phase_13_data(conn: sqlite3.Connection, now: str) -> None:
+    if not _table_exists(conn, "hospital_registrations"):
+        return
+    rows = [
+        ("OP-1001", "op", "Ravi Kumar", "9876543210", 42, "male", 1, 4, "new", "T-1001", None, None, None, None, None, None, None, None, "registered", "ready_for_billing", "Fever and cough"),
+        ("OP-1002", "op", "Ananya Rao", "9988776655", 8, "female", 4, 2, "new", "T-1002", None, None, None, None, None, None, None, None, "checked_in", "ready_for_billing", "Pediatric consult"),
+        ("OP-1003", "op", "Suresh Naidu", "9123456780", 51, "male", 5, 3, "new", "T-1003", None, None, None, None, None, None, None, None, "registered", "pending", "Knee pain"),
+        ("OP-1004", "op", "Priya Menon", "9000011111", 34, "female", 1, 1, "new", "T-1004", None, None, None, None, None, None, None, None, "registered", "pending", "General consultation"),
+        ("OP-1005", "op", "Vikram Singh", "9000022222", 46, "male", 1, 4, "new", "T-1005", None, None, None, None, None, None, None, None, "checked_in", "ready_for_billing", "Diabetes follow-up"),
+        ("IP-1006", "ip", "Mohan Reddy", "9000033333", 63, "male", 1, 1, None, None, "ADM-1006", "General Ward", "Bed G12", "Sita Reddy", 500000, None, None, None, "admitted", "pending", "Observation"),
+        ("IP-1007", "ip", "Lakshmi Devi", "9000044444", 58, "female", 1, 4, None, None, "ADM-1007", "Semi Private", "Room SP04", "Ramesh Devi", 1000000, None, None, None, "admitted", "pending", "Inpatient admission"),
+        ("IP-1008", "ip", "Fatima Khan", "9000055555", 67, "female", 6, 5, None, None, "ADM-1008", "ICU", "Bed ICU-03", "Aamir Khan", 2500000, None, None, None, "admitted", "pending", "ICU admission"),
+        ("IP-1009", "ip", "Arjun Patel", "9000066666", 39, "male", 5, 3, None, None, "ADM-1009", "Ortho Ward", "Bed O07", "Neha Patel", 800000, None, None, None, "admitted", "pending", "Fracture care"),
+        ("ER-1010", "emergency", "Unknown Patient", None, None, None, 6, 5, None, None, None, None, None, None, None, "high", None, None, "active", "ready_for_billing", "Brought by ambulance"),
+        ("ER-1011", "emergency", "Kiran P", "9000077777", 29, "male", 6, 5, None, None, None, None, None, None, None, "medium", None, None, "active", "ready_for_billing", "Minor trauma"),
+        ("ER-1012", "emergency", "Meena L", "9000088888", 45, "female", 6, 5, None, None, None, None, None, None, None, "high", None, None, "active", "pending", "Chest pain"),
+        ("FU-1013", "follow_up", "Deepa Nair", "9000099999", 37, "female", 1, 1, "follow_up", "T-1013", None, None, None, None, None, None, None, None, "registered", "pending", "Follow-up visit"),
+        ("FU-1014", "follow_up", "Rahul Bose", "9011111111", 44, "male", 5, 3, "follow_up", "T-1014", None, None, None, None, None, None, None, None, "checked_in", "ready_for_billing", "Post-op review"),
+        ("FU-1015", "follow_up", "Nisha Verma", "9022222222", 31, "female", 4, 2, "follow_up", "T-1015", None, None, None, None, None, None, None, None, "registered", "pending", "Review"),
+        ("LAB-1016", "lab", "Amit Shah", "9033333333", 55, "male", 2, None, None, None, None, None, None, None, None, None, "sample_pending", None, "registered", "pending", "CBC"),
+        ("LAB-1017", "lab", "Geeta Joshi", "9044444444", 49, "female", 2, None, None, None, None, None, None, None, None, None, "sample_collected", None, "active", "ready_for_billing", "Lipid profile"),
+        ("LAB-1018", "lab", "Naveen Rao", "9055555555", 27, "male", 2, None, None, None, None, None, None, None, None, None, "sample_pending", None, "registered", "pending", "Blood sugar"),
+        ("PH-1019", "pharmacy_walkin", "Sunita Das", "9066666666", 52, "female", 3, None, None, None, None, None, None, None, None, None, None, "RX-8841", "registered", "pending", "Prescription refill"),
+        ("PH-1020", "pharmacy_walkin", "Harish Gowda", "9077777777", 61, "male", 3, None, None, None, None, None, None, None, None, None, None, "RX-8842", "registered", "ready_for_billing", "Walk-in medicine"),
+        ("PH-1021", "pharmacy_walkin", "Pooja Kulkarni", "9088888888", 26, "female", 3, None, None, None, None, None, None, None, None, None, None, "RX-8843", "registered", "pending", "Prescription purchase"),
+    ]
+    for row in rows:
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO hospital_registrations (
+                registration_number, organization_id, branch_id, device_id, registration_type,
+                patient_name, mobile_number, age_years, gender, department_id, doctor_id,
+                visit_type, token_number, admission_number, ward, room_or_bed, attender_name,
+                deposit_amount_paise, priority, sample_status, prescription_reference, status,
+                billing_status, notes, created_by_user_id, created_at, updated_at
+            )
+            VALUES (?, 1, 1, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+            """,
+            (*row, now, now),
+        )
+        registration_id = conn.execute("SELECT id FROM hospital_registrations WHERE registration_number = ?", (row[0],)).fetchone()["id"]
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO hospital_registration_events (id, registration_id, event_type, notes, created_by_user_id, created_at)
+            VALUES (?, ?, 'seeded', 'Demo seed', 1, ?)
+            """,
+            (registration_id, registration_id, now),
         )
 
 

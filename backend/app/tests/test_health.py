@@ -131,3 +131,15 @@ def test_request_id_header_reused_in_response(client: TestClient) -> None:
 
     assert body["request_id"] == "REQ-TEST-123"
     assert response.headers["X-Request-ID"] == "REQ-TEST-123"
+
+
+def test_cors_allows_local_frontend_origin(client: TestClient) -> None:
+    response = client.get(
+        "/api/v1/health",
+        headers={"Origin": "http://127.0.0.1:3000", "X-Request-ID": "REQ-CORS"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:3000"
+    assert response.headers["X-Request-ID"] == "REQ-CORS"
+    assert response.json()["request_id"] == "REQ-CORS"
