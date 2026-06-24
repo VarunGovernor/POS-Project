@@ -207,9 +207,13 @@ button:disabled {
 }
 
 .module-card.primary {
-  background: linear-gradient(135deg, rgba(18, 48, 71, 0.94), rgba(15, 118, 110, 0.9));
+  background: rgba(255, 255, 255, 0.8);
   border-color: rgba(15, 118, 110, 0.34);
-  color: #ffffff;
+  color: var(--text);
+}
+
+.module-card.featured {
+  border-left: 4px solid var(--emerald);
 }
 
 .module-card:hover {
@@ -228,7 +232,17 @@ button:disabled {
 }
 
 .module-card .label {
+  align-self: flex-start;
+  background: var(--soft);
+  border: 1px solid rgba(15, 118, 110, 0.16);
+  border-radius: 999px;
+  color: var(--accent);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
   margin-bottom: 0;
+  padding: 5px 10px;
+  text-transform: uppercase;
 }
 
 .module-card .value {
@@ -237,11 +251,6 @@ button:disabled {
 
 .module-card p {
   margin: 0;
-}
-
-.module-card.primary .label,
-.module-card.primary p {
-  color: rgba(255, 255, 255, 0.78);
 }
 
 .chip {

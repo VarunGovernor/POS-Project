@@ -78,7 +78,7 @@ export function DashboardScreen() {
           {state.session ? <Link className="button" href="/session/close">Close Session</Link> : null}
         </div>
         <div className="module-grid">
-          <Module href="/registrations" title="Registration Center" text="OP, IP, emergency, follow-up, lab, pharmacy walk-in" primary />
+          <Module href="/registrations" title="Registration Center" text="OP, IP, emergency, follow-up, lab, pharmacy walk-in" primary featured />
           <Module href="/patients" title="Patient Lookup" text="Find or create patient records" />
           <Module href="/billing/new" title="New Bill" text="Create a draft bill" primary />
           <Module href="/billing/drafts" title="Drafts" text="Resume draft bills" />
@@ -96,9 +96,9 @@ export function DashboardScreen() {
   );
 }
 
-function Module({ href, title, text, primary = false }: { href: string; title: string; text: string; primary?: boolean }) {
+function Module({ href, title, text, primary = false, featured = false }: { href: string; title: string; text: string; primary?: boolean; featured?: boolean }) {
   return (
-    <Link className={`module-card ${primary ? "primary" : ""}`} href={href}>
+    <Link className={`module-card ${primary ? "primary" : ""} ${featured ? "featured" : ""}`} href={href}>
       <span className="label">{primary ? "Primary" : "Module"}</span>
       <span className="value">{title}</span>
       <p>{text}</p>
