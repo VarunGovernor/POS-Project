@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { AuditLog, localApi } from "@/lib/api/client";
 
 function token() {
@@ -38,7 +39,7 @@ export function AuditScreen() {
   return (
     <main>
       <section className="shell panel">
-        <div className="header"><h1>Audit</h1><button type="button" onClick={load}>Refresh</button></div>
+        <div className="header"><h1>Audit</h1><div className="actions screen-nav"><ScreenNavActions /><button type="button" onClick={load}>Refresh</button></div></div>
         {items.length === 0 ? <p>No audit logs.</p> : null}
         <div className="status-grid">
           {items.map((item) => (

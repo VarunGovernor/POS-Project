@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { FinalBill, localApi } from "@/lib/api/client";
 
 function token() {
@@ -25,7 +26,7 @@ export function BillDetailScreen({ billId }: { billId: string }) {
   return (
     <main>
       <section className="shell panel">
-        <div className="header"><h1>{bill.bill_number}</h1><span className="value">{bill.sync_status}</span></div>
+        <div className="header"><h1>{bill.bill_number}</h1><div className="actions screen-nav"><ScreenNavActions /><span className="value">{bill.sync_status}</span></div></div>
         <p>{bill.patient?.full_name}</p>
         <div className="status-grid">
           {(bill.items ?? []).map((item) => (
@@ -41,7 +42,10 @@ export function BillDetailScreen({ billId }: { billId: string }) {
           <div className="status-item"><span className="label">Payment</span><span className="value">{bill.payment?.payment_method}</span></div>
           <div className="status-item"><span className="label">Receipt</span><span className="value">{bill.receipt?.receipt_number}</span></div>
         </div>
-        <div className="actions"><Link className="button" href={`/billing/bills/${bill.id}/receipt`}>Receipt</Link></div>
+        <div className="actions">
+          <Link className="button secondary" href={`/billing/bills/${bill.id}/receipt`}>View Receipt</Link>
+          {bill.receipt ? <Link className="button" href={`/receipts/${bill.receipt.id}/print`}>Print Receipt</Link> : null}
+        </div>
       </section>
     </main>
   );

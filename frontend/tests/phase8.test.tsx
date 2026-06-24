@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { SyncScreen } from "@/app/sync/SyncScreen";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), back: vi.fn() })
+}));
+
 function ok(data: unknown) {
   return Promise.resolve(new Response(JSON.stringify({ success: true, data, request_id: "REQ-TEST" })));
 }

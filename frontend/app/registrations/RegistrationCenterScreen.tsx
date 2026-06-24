@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { Department, Doctor, Registration, RegistrationType, localApi } from "@/lib/api/client";
 
 const tabs: Array<{ type: RegistrationType; label: string }> = [
@@ -142,7 +143,10 @@ export function RegistrationCenterScreen() {
             <span className="chip">Hospital POS</span>
             <h1>Registration Center</h1>
           </div>
-          <button type="button" onClick={() => void load()}>Refresh</button>
+          <div className="actions screen-nav">
+            <ScreenNavActions />
+            <button type="button" onClick={() => void load()}>Refresh</button>
+          </div>
         </div>
 
         <div className="status-grid">

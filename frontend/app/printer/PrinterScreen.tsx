@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { PrinterJob, PrinterStatus, localApi } from "@/lib/api/client";
 
 function token() {
@@ -61,7 +62,10 @@ export function PrinterScreen() {
   return (
     <main>
       <section className="shell panel">
-        <div className="header"><h1>Printer</h1><span className="value">{status?.status}</span></div>
+        <div className="header">
+          <h1>Printer</h1>
+          <div className="actions screen-nav"><ScreenNavActions /><span className="value">{status?.status}</span></div>
+        </div>
         {message ? <p className="error-text">{message}</p> : null}
         {status?.status === "not_configured" ? <p className="error-text">Printer not configured.</p> : null}
         {status?.printer ? <p>{status.printer.printer_name} · {status.printer.printer_type}</p> : null}

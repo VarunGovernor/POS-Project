@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { BillDraft, ServiceItem, localApi } from "@/lib/api/client";
 
 function token() {
@@ -86,7 +87,7 @@ export function DraftWorkspaceScreen({ draftId }: { draftId: string }) {
   return (
     <main>
       <section className="shell panel">
-        <div className="header"><h1>Draft {draft.draft_number}</h1><span className="value">{draft.status}</span></div>
+        <div className="header"><h1>Draft {draft.draft_number}</h1><div className="actions screen-nav"><ScreenNavActions /><span className="value">{draft.status}</span></div></div>
         {draft.status === "voided" ? <p className="error-text">Draft voided.</p> : null}
         {message ? <p className="error-text">{message}</p> : null}
         <p>Autosaved {draft.last_autosaved_at}</p>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { BillingContext, Department, Doctor, Patient, localApi } from "@/lib/api/client";
 
 function token() {
@@ -56,7 +57,7 @@ export function NewBillScreen() {
     try {
       let draftPatientId = patientId;
       if (!draftPatientId && billingContext?.patient_name) {
-        const created = await localApi.createPatient(token(), { full_name: billingContext.patient_name });
+        const created = await localApi.createPatient(token(), { full_name: billingContext.patient_name, phone: billingContext.mobile_number ?? undefined });
         draftPatientId = created.data.patient.id;
       }
       const response = await localApi.createDraft(token(), {
@@ -64,7 +65,7 @@ export function NewBillScreen() {
         bill_type: billingContext?.registration_type === "ip" ? "ip" : "op",
         department_id: departmentId || undefined,
         doctor_id: doctorId || undefined,
-        notes: billingContext?.notes ?? "OP visit"
+        notes: billingContext ? `REGCTX:${JSON.stringify(billingContext)}\n${billingContext.notes}` : "OP visit"
       });
       localStorage.removeItem("counteros_billing_context");
       router.push(`/billing/drafts/${response.data.draft.id}`);
@@ -82,11 +83,18 @@ export function NewBillScreen() {
   return (
     <main>
       <section className="shell panel">
-        <h1>New Bill</h1>
+        <div className="header">
+          <h1>New Bill</h1>
+          <div className="actions screen-nav"><ScreenNavActions /></div>
+        </div>
         {billingContext ? (
           <div className="toast">
-            <strong>Billing from registration</strong>
-            <p>{billingContext.registration_number} · {billingContext.registration_type.toUpperCase()} · {billingContext.patient_name}</p>
+            <strong>Billing from Registration</strong>
+            <p>{label(billingContext.registration_type)} · {billingContext.registration_number} · {billingContext.patient_name}</p>
+            {billingContext.token_number ? <p>Token {billingContext.token_number}</p> : null}
+            {billingContext.admission_number ? <p>Admission {billingContext.admission_number} · {billingContext.ward ?? "Ward pending"} · {billingContext.room_or_bed ?? "Bed pending"}</p> : null}
+            {billingContext.priority ? <p>Priority {billingContext.priority}</p> : null}
+            {billingContext.deposit_amount ? <p>Deposit INR {billingContext.deposit_amount}</p> : null}
             <p>{billingContext.department_name ?? "Department pending"} {billingContext.doctor_name ? `· ${billingContext.doctor_name}` : ""}</p>
           </div>
         ) : null}
@@ -99,4 +107,8 @@ export function NewBillScreen() {
       </section>
     </main>
   );
+}
+
+function label(type: string) {
+  return type.split("_").map((part) => part[0].toUpperCase() + part.slice(1)).join(" ");
 }

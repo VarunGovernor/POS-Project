@@ -6,9 +6,10 @@ import { NewPatientScreen } from "@/app/patients/new/NewPatientScreen";
 import { PatientsScreen } from "@/app/patients/PatientsScreen";
 
 const push = vi.fn();
+const back = vi.fn();
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push })
+  useRouter: () => ({ push, back })
 }));
 
 vi.mock("next/link", () => ({
@@ -41,6 +42,7 @@ describe("Phase 3 screens", () => {
     });
     vi.restoreAllMocks();
     push.mockReset();
+    back.mockReset();
     localStorage.setItem("counteros_token", "TOKEN");
   });
 

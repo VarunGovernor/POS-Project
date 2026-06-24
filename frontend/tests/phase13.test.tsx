@@ -5,9 +5,10 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { RegistrationCenterScreen } from "@/app/registrations/RegistrationCenterScreen";
 
 const push = vi.fn();
+const back = vi.fn();
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push })
+  useRouter: () => ({ push, back })
 }));
 
 function ok(data: unknown) {
@@ -58,6 +59,7 @@ describe("Phase 13 registration UI", () => {
     });
     vi.restoreAllMocks();
     push.mockReset();
+    back.mockReset();
     localStorage.setItem("counteros_token", "TOKEN");
   });
 
@@ -73,6 +75,8 @@ describe("Phase 13 registration UI", () => {
 
     expect(screen.getByLabelText("Loading registrations")).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByText("Ravi Kumar").length).toBeGreaterThan(0));
+    expect(screen.getByRole("button", { name: "← Back" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Dashboard" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "OP Registration" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "IP Registration" })).toBeInTheDocument();
     expect(screen.getAllByText("New Registration").length).toBeGreaterThan(0);

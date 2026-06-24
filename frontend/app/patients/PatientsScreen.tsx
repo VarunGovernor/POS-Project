@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
+import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { Patient, localApi } from "@/lib/api/client";
 
 type State =
@@ -47,7 +48,10 @@ export function PatientsScreen() {
       <section className="shell panel">
         <div className="header">
           <h1>Patients</h1>
-          <Link className="button" href="/patients/new">New Patient</Link>
+          <div className="actions screen-nav">
+            <ScreenNavActions />
+            <Link className="button" href="/patients/new">New Patient</Link>
+          </div>
         </div>
         <form onSubmit={submit} className="form-grid">
           <label><span className="label">Search</span><input value={query} onChange={(event) => setQuery(event.target.value)} /></label>

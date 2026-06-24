@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { SupportStatus, localApi } from "@/lib/api/client";
 
 function token() {
@@ -48,7 +49,7 @@ export function SupportScreen() {
   return (
     <main>
       <section className="shell panel">
-        <div className="header"><h1>Support</h1><button type="button" onClick={load}>Refresh</button></div>
+        <div className="header"><h1>Support</h1><div className="actions screen-nav"><ScreenNavActions /><button type="button" onClick={load}>Refresh</button></div></div>
         {message ? <p className="error-text">{message}</p> : null}
         <div className="status-grid">
           {status ? Object.entries(status).map(([key, value]) => (

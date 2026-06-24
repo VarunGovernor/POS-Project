@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { TodayReport, localApi } from "@/lib/api/client";
 
 function token() {
@@ -50,7 +51,7 @@ export function ReportsScreen() {
   return (
     <main>
       <section className="shell panel">
-        <div className="header"><h1>Reports</h1><button type="button" onClick={load}>Refresh</button></div>
+        <div className="header"><h1>Reports</h1><div className="actions screen-nav"><ScreenNavActions /><button type="button" onClick={load}>Refresh</button></div></div>
         <div className="status-grid">
           <div className="status-item"><span className="label">Business date</span><span className="value">{today?.business_date}</span></div>
           <div className="status-item"><span className="label">Bills</span><span className="value">{today?.bill_count}</span></div>

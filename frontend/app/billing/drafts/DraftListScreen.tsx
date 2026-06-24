@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { BillDraft, localApi } from "@/lib/api/client";
 
 function token() {
@@ -34,7 +35,7 @@ export function DraftListScreen() {
   return (
     <main>
       <section className="shell panel">
-        <div className="header"><h1>Drafts</h1><Link className="button" href="/billing/new">New Bill</Link></div>
+        <div className="header"><h1>Drafts</h1><div className="actions screen-nav"><ScreenNavActions /><Link className="button" href="/billing/new">New Bill</Link></div></div>
         {state === "loading" ? <p>Loading.</p> : null}
         {state === "api-unavailable" ? <p className="error-text">API unavailable.</p> : null}
         {state === "error" ? <p className="error-text">{message}</p> : null}

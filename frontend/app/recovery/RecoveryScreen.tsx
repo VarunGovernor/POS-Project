@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { RecoveryMarker, RecoveryStatus, localApi } from "@/lib/api/client";
 
 function token() {
@@ -63,7 +64,10 @@ export function RecoveryScreen() {
   return (
     <main>
       <section className="shell panel">
-        <div className="header"><h1>Recovery</h1><span className="value">{status?.recovery_required ? "required" : "ok"}</span></div>
+        <div className="header">
+          <h1>Recovery</h1>
+          <div className="actions screen-nav"><ScreenNavActions /><span className="value">{status?.recovery_required ? "required" : "ok"}</span></div>
+        </div>
         {message ? <p className="error-text">{message}</p> : null}
         <div className="status-grid">
           <div className="status-item"><span className="label">Open markers</span><span className="value">{status?.open_marker_count}</span></div>

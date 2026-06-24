@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
+import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { Receipt, localApi } from "@/lib/api/client";
+import { ReceiptPaper } from "@/app/receipts/[receiptId]/print/ReceiptPrintScreen";
 
 function token() {
   return typeof window === "undefined" ? null : localStorage.getItem("counteros_token");
@@ -25,6 +28,7 @@ export function ReceiptPreviewScreen({ billId }: { billId: string }) {
     try {
       const response = await localApi.printReceipt(token(), receipt.id);
       setJobStatus(response.data.job.status);
+      window.print();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Print failed.");
     }
@@ -36,34 +40,26 @@ export function ReceiptPreviewScreen({ billId }: { billId: string }) {
     try {
       const response = await localApi.reprintReceipt(token(), receipt.id, "Customer requested duplicate copy");
       setJobStatus(response.data.job.status);
+      window.print();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Reprint failed.");
     }
   }
 
-  if (message) return <main><section className="shell panel"><h1>Receipt</h1><p className="error-text">{message}</p></section></main>;
   if (!receipt) return <main><section className="shell panel"><h1>Receipt</h1><p>Loading.</p></section></main>;
 
-  const payload = receipt.receipt_payload;
   return (
     <main>
       <section className="shell panel">
-        <h1>{receipt.receipt_number}</h1>
-        <p>{String(payload.hospital_or_organization_name)}</p>
-        <p>{String(payload.patient_name)} · {String(payload.bill_number)}</p>
-        <div className="status-grid">
-          {(payload.items ?? []).map((item, index) => (
-            <div className="status-item" key={index}>
-              <span className="label">{String(item.service_name)}</span>
-              <span className="value">{String(item.line_total)}</span>
-              <p>Qty {String(item.quantity)}</p>
-            </div>
-          ))}
+        <div className="header no-print">
+          <h1>{receipt.receipt_number}</h1>
+          <div className="actions screen-nav"><ScreenNavActions /></div>
         </div>
-        <div className="status-item"><span className="label">Total</span><span className="value">{String(payload.total_amount)}</span></div>
+        <ReceiptPaper receipt={receipt} />
         {message ? <p className="error-text">{message}</p> : null}
         {jobStatus ? <p>Print job {jobStatus}</p> : null}
-        <div className="actions">
+        <div className="actions no-print">
+          <Link className="button secondary" href={`/receipts/${receipt.id}/print`}>View Printable Receipt</Link>
           <button type="button" onClick={print}>Print Receipt</button>
           <button type="button" onClick={reprint}>Reprint Receipt</button>
         </div>

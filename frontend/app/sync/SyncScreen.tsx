@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { SyncConflict, SyncEvent, SyncStatus, localApi } from "@/lib/api/client";
 
 function token() {
@@ -73,7 +74,10 @@ export function SyncScreen() {
   return (
     <main>
       <section className="shell panel">
-        <div className="header"><h1>Sync</h1><span className="value">{status?.status}</span></div>
+        <div className="header">
+          <h1>Sync</h1>
+          <div className="actions screen-nav"><ScreenNavActions /><span className="value">{status?.status}</span></div>
+        </div>
         {message ? <p className="error-text">{message}</p> : null}
         <div className="status-grid">
           <div className="status-item"><span className="label">Pending</span><span className="value">{status?.pending_count}</span></div>

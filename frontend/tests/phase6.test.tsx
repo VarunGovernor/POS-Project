@@ -4,6 +4,14 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { ReceiptPreviewScreen } from "@/app/billing/bills/[billId]/receipt/ReceiptPreviewScreen";
 import { PrinterScreen } from "@/app/printer/PrinterScreen";
+import { ReceiptPrintScreen } from "@/app/receipts/[receiptId]/print/ReceiptPrintScreen";
+
+const push = vi.fn();
+const back = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push, back })
+}));
 
 function ok(data: unknown) {
   return Promise.resolve(new Response(JSON.stringify({ success: true, data, request_id: "REQ-TEST" })));
@@ -27,7 +35,7 @@ const receipt = {
   status: "generated",
   receipt_type: "original",
   generated_at: "now",
-  receipt_payload: { hospital_or_organization_name: "Development Organization", patient_name: "Ravi Kumar", bill_number: "BILL-1", total_amount: 500, items: [{ service_name: "OP Consultation", quantity: 1, line_total: 500 }] }
+  receipt_payload: { hospital_or_organization_name: "Development Organization", branch_name: "Main", counter_name: "OP", patient_name: "Ravi Kumar", bill_number: "BILL-1", receipt_number: "RCPT-1", total_amount: 500, received_amount: 500, change_amount: 0, items: [{ service_name: "OP Consultation", quantity: 1, unit_price: 500, line_total: 500 }], registration: { registration_number: "OP-1001", registration_type: "op", token_number: "T-1001" } }
 };
 
 describe("Phase 6 screens", () => {
@@ -43,6 +51,9 @@ describe("Phase 6 screens", () => {
       }
     });
     vi.restoreAllMocks();
+    push.mockReset();
+    back.mockReset();
+    Object.defineProperty(window, "print", { configurable: true, value: vi.fn() });
     localStorage.setItem("counteros_token", "TOKEN");
   });
 
@@ -70,8 +81,21 @@ describe("Phase 6 screens", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Print Receipt" })).toBeInTheDocument());
     await userEvent.click(screen.getByRole("button", { name: "Print Receipt" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("http://127.0.0.1:8000/api/v1/receipts/1/print", expect.objectContaining({ method: "POST" })));
+    expect(window.print).toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Reprint Receipt" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("http://127.0.0.1:8000/api/v1/receipts/1/reprint", expect.objectContaining({ method: "POST" })));
+  });
+
+  test("print receipt page renders and opens browser print", async () => {
+    vi.spyOn(global, "fetch").mockImplementation((input) => String(input).includes("/print") ? ok({ job: { ...job, status: "printed", failure_message: null } }) : ok({ receipt }));
+    render(<ReceiptPrintScreen receiptId="1" />);
+    await waitFor(() => expect(screen.getByText("OP-1001")).toBeInTheDocument());
+    expect(screen.getByText("Ravi Kumar")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "← Back" }).closest(".no-print")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Dashboard" }).closest(".no-print")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Print Receipt" }).closest(".no-print")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Print Receipt" }));
+    await waitFor(() => expect(window.print).toHaveBeenCalled());
   });
 
   test("print failure state renders", async () => {

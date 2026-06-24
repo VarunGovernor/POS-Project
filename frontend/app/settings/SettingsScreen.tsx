@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { ScreenNavActions } from "@/app/components/ScreenNavActions";
 import { SettingItem, localApi } from "@/lib/api/client";
 
 function token() {
@@ -48,7 +49,7 @@ export function SettingsScreen() {
   return (
     <main>
       <section className="shell panel">
-        <div className="header"><h1>Settings</h1><button type="button" onClick={load}>Refresh</button></div>
+        <div className="header"><h1>Settings</h1><div className="actions screen-nav"><ScreenNavActions /><button type="button" onClick={load}>Refresh</button></div></div>
         {message ? <p className="error-text">{message}</p> : null}
         {items.length === 0 ? <p>No settings.</p> : null}
         <div className="status-grid">

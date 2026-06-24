@@ -7,9 +7,10 @@ import { DraftWorkspaceScreen } from "@/app/billing/drafts/[draftId]/DraftWorksp
 import { NewBillScreen } from "@/app/billing/new/NewBillScreen";
 
 const push = vi.fn();
+const back = vi.fn();
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push })
+  useRouter: () => ({ push, back })
 }));
 
 vi.mock("next/link", () => ({
@@ -42,6 +43,7 @@ describe("Phase 4 screens", () => {
     });
     vi.restoreAllMocks();
     push.mockReset();
+    back.mockReset();
     localStorage.setItem("counteros_token", "TOKEN");
   });
 
@@ -57,11 +59,13 @@ describe("Phase 4 screens", () => {
     render(<NewBillScreen />);
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Create Draft" })).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "← Back" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Dashboard" })).toBeInTheDocument();
     expect(screen.getByText("Ravi Kumar")).toBeInTheDocument();
   });
 
   test("new bill uses registration billing context", async () => {
-    localStorage.setItem("counteros_billing_context", JSON.stringify({ registration_id: "10", registration_number: "OP-1010", registration_type: "op", patient_name: "Registration Patient", patient_id: null, department_id: "1", doctor_id: "1", department_name: "General Medicine", doctor_name: "Dr. Dev General", notes: "From OP Registration OP-1010" }));
+    localStorage.setItem("counteros_billing_context", JSON.stringify({ registration_id: "10", registration_number: "OP-1010", registration_type: "op", patient_name: "Registration Patient", patient_id: null, mobile_number: "999", department_id: "1", doctor_id: "1", department_name: "General Medicine", doctor_name: "Dr. Dev General", token_number: "T-1010", notes: "From OP Registration OP-1010" }));
     const fetchMock = vi.spyOn(global, "fetch").mockImplementation((input, init) => {
       const url = String(input);
       if (url.includes("/api/v1/sessions/current")) return ok({ session: { id: "1" } });
@@ -73,7 +77,8 @@ describe("Phase 4 screens", () => {
     });
 
     render(<NewBillScreen />);
-    await waitFor(() => expect(screen.getByText("Billing from registration")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Billing from Registration")).toBeInTheDocument());
+    expect(screen.getByText(/Token T-1010/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Create Draft" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
@@ -81,6 +86,26 @@ describe("Phase 4 screens", () => {
       expect.objectContaining({ method: "POST" })
     ));
     expect(push).toHaveBeenCalledWith("/billing/drafts/1");
+  });
+
+  test("new bill shows IP and emergency registration context", async () => {
+    vi.spyOn(global, "fetch").mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes("/api/v1/sessions/current")) return ok({ session: { id: "1" } });
+      if (url.includes("/api/v1/patients")) return ok({ items: [], page: 1, page_size: 25, total: 0, has_next: false });
+      if (url.includes("/api/v1/catalog/departments")) return ok({ items: [department] });
+      return ok({ items: [doctor] });
+    });
+
+    localStorage.setItem("counteros_billing_context", JSON.stringify({ registration_id: "11", registration_number: "IP-1011", registration_type: "ip", patient_name: "IP Patient", patient_id: null, department_id: "1", doctor_id: "1", admission_number: "ADM-1011", ward: "ICU", room_or_bed: "Bed 3", deposit_amount: 5000, notes: "From IP Registration IP-1011" }));
+    const { unmount } = render(<NewBillScreen />);
+    await waitFor(() => expect(screen.getByText(/Admission ADM-1011/)).toBeInTheDocument());
+    expect(screen.getByText(/Deposit INR 5000/)).toBeInTheDocument();
+    unmount();
+
+    localStorage.setItem("counteros_billing_context", JSON.stringify({ registration_id: "12", registration_number: "ER-1012", registration_type: "emergency", patient_name: "Unknown Patient", patient_id: null, department_id: "1", doctor_id: "1", priority: "high", notes: "From EMERGENCY Registration ER-1012" }));
+    render(<NewBillScreen />);
+    await waitFor(() => expect(screen.getByText(/Priority high/)).toBeInTheDocument());
   });
 
   test("new bill no active session state renders", async () => {

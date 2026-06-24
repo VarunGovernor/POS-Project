@@ -5,6 +5,10 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { RecoveryScreen } from "@/app/recovery/RecoveryScreen";
 import { StartupScreen } from "@/app/startup/StartupScreen";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), back: vi.fn() })
+}));
+
 vi.mock("next/link", () => ({
   default: ({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) => (
     <a href={href} className={className}>{children}</a>

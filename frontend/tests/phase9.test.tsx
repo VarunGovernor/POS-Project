@@ -7,6 +7,10 @@ import { ReportsScreen } from "@/app/reports/ReportsScreen";
 import { SettingsScreen } from "@/app/settings/SettingsScreen";
 import { SupportScreen } from "@/app/support/SupportScreen";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), back: vi.fn() })
+}));
+
 function ok(data: unknown) {
   return Promise.resolve(new Response(JSON.stringify({ success: true, data, request_id: "REQ-TEST" })));
 }

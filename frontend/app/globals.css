@@ -141,6 +141,16 @@ textarea:focus {
   margin-top: 20px;
 }
 
+.screen-nav {
+  margin-top: 0;
+}
+
+.screen-nav button,
+.screen-nav a.button {
+  min-height: 40px;
+  padding: 0 14px;
+}
+
 button,
 a.button {
   border: 0;
@@ -311,6 +321,80 @@ button:disabled {
   font-weight: 700;
 }
 
+.print-shell {
+  max-width: 720px;
+}
+
+.receipt-paper {
+  background: #ffffff;
+  border: 1px solid rgba(18, 52, 73, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(18, 48, 71, 0.1);
+  color: #111827;
+  margin: 20px auto 0;
+  max-width: 420px;
+  padding: 22px;
+}
+
+.receipt-paper header {
+  border-bottom: 1px dashed #9ca3af;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  text-align: center;
+}
+
+.receipt-paper h1 {
+  font-size: 22px;
+}
+
+.receipt-paper p {
+  color: #374151;
+  margin: 6px 0 0;
+}
+
+.receipt-lines {
+  border-bottom: 1px dashed #d1d5db;
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+}
+
+.receipt-line,
+.receipt-item {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr auto;
+  line-height: 1.35;
+}
+
+.receipt-line span,
+.receipt-item span {
+  color: #4b5563;
+}
+
+.receipt-item {
+  border-bottom: 1px solid #eef2f7;
+  grid-template-columns: 1.4fr 0.8fr auto;
+  padding: 8px 0;
+}
+
+.receipt-lines.totals {
+  border-bottom: 0;
+  border-top: 1px dashed #9ca3af;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.receipt-paper footer {
+  border-top: 1px dashed #d1d5db;
+  color: #4b5563;
+  font-size: 13px;
+  margin-top: 12px;
+  padding-top: 12px;
+  text-align: center;
+}
+
 @media (max-width: 640px) {
   main {
     padding: 16px;
@@ -350,5 +434,44 @@ button:disabled {
 @keyframes shimmer {
   to {
     background-position: -220% 0;
+  }
+}
+
+@media print {
+  @page {
+    margin: 10mm;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+
+  main {
+    min-height: auto;
+    padding: 0;
+  }
+
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+
+  .panel,
+  .print-shell {
+    animation: none;
+    background: #ffffff;
+    border: 0;
+    box-shadow: none;
+    max-width: none;
+    padding: 0;
+  }
+
+  .receipt-paper {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    margin: 0 auto;
+    max-width: 80mm;
+    padding: 0;
   }
 }

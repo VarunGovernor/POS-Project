@@ -545,6 +545,9 @@ def _build_receipt_payload(conn: sqlite3.Connection, bill: dict[str, Any], payme
     branch = conn.execute("SELECT branch_name FROM branches WHERE id = ?", (bill["branch_id"],)).fetchone()
     device = conn.execute("SELECT device_code, counter_name FROM devices WHERE id = ?", (bill["device_id"],)).fetchone()
     patient = conn.execute("SELECT full_name, patient_number FROM patients WHERE id = ?", (bill["patient_id"],)).fetchone()
+    draft = conn.execute("SELECT notes FROM bill_drafts WHERE id = ?", (bill["draft_id"],)).fetchone()
+    department = conn.execute("SELECT department_name FROM departments WHERE id = ?", (bill["department_id"],)).fetchone() if bill["department_id"] else None
+    doctor = conn.execute("SELECT full_name FROM doctors WHERE id = ?", (bill["doctor_id"],)).fetchone() if bill["doctor_id"] else None
     cashier = conn.execute("SELECT display_name FROM users WHERE id = ?", (bill["cashier_user_id"],)).fetchone()
     items = [
         {
@@ -555,6 +558,7 @@ def _build_receipt_payload(conn: sqlite3.Connection, bill: dict[str, Any], payme
         }
         for row in conn.execute("SELECT * FROM bill_items WHERE bill_id = ? ORDER BY id", (bill["id"],)).fetchall()
     ]
+    registration_context = _registration_context_from_notes(draft["notes"] if draft else None)
     return {
         "hospital_or_organization_name": org["organization_name"],
         "branch_name": branch["branch_name"],
@@ -564,8 +568,11 @@ def _build_receipt_payload(conn: sqlite3.Connection, bill: dict[str, Any], payme
         "receipt_number": receipt_number,
         "patient_name": patient["full_name"],
         "patient_number": patient["patient_number"],
+        "department_name": department["department_name"] if department else registration_context.get("department_name"),
+        "doctor_name": doctor["full_name"] if doctor else registration_context.get("doctor_name"),
         "cashier_name": cashier["display_name"],
         "bill_type": bill["bill_type"],
+        "registration": registration_context,
         "items": items,
         "subtotal_amount": _amount(bill["subtotal_amount_paise"]),
         "discount_amount": _amount(bill["discount_amount_paise"]),
@@ -578,6 +585,16 @@ def _build_receipt_payload(conn: sqlite3.Connection, bill: dict[str, Any], payme
         "currency": bill["currency"],
         "generated_at": payment["paid_at"],
     }
+
+
+def _registration_context_from_notes(notes: str | None) -> dict[str, Any]:
+    if not notes or not notes.startswith("REGCTX:"):
+        return {}
+    first_line = notes.splitlines()[0]
+    try:
+        return json.loads(first_line.removeprefix("REGCTX:"))
+    except json.JSONDecodeError:
+        return {}
 
 
 def list_bills(status: str | None, patient_id: str | None, cashier_session_id: str | None, page: int, page_size: int) -> dict[str, Any]:

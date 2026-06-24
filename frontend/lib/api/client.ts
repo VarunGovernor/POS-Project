@@ -389,10 +389,17 @@ export type BillingContext = {
   registration_type: RegistrationType;
   patient_name: string;
   patient_id: string | null;
+  mobile_number?: string | null;
   department_id: string | null;
   doctor_id: string | null;
   department_name?: string | null;
   doctor_name?: string | null;
+  token_number?: string | null;
+  admission_number?: string | null;
+  ward?: string | null;
+  room_or_bed?: string | null;
+  priority?: string | null;
+  deposit_amount?: number | null;
   notes: string;
 };
 
@@ -503,6 +510,7 @@ export const localApi = {
     request<{ items: FinalBill[]; page: number; page_size: number; total: number; has_next: boolean }>("/api/v1/bills", { token }),
   bill: (token: string | null, billId: string) => request<{ bill: FinalBill }>(`/api/v1/bills/${billId}`, { token }),
   receiptByBill: (token: string | null, billId: string) => request<{ receipt: Receipt }>(`/api/v1/receipts/by-bill/${billId}`, { token }),
+  receipt: (token: string | null, receiptId: string) => request<{ receipt: Receipt }>(`/api/v1/receipts/${receiptId}`, { token }),
   printerStatus: (token: string | null) => request<PrinterStatus>("/api/v1/printer/status", { token }),
   printerJobs: (token: string | null) =>
     request<{ items: PrinterJob[]; page: number; page_size: number; total: number; has_next: boolean }>("/api/v1/printer/jobs", { token }),

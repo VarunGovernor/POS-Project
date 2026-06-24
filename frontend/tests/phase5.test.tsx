@@ -8,9 +8,10 @@ import { BillListScreen } from "@/app/billing/bills/BillListScreen";
 import { DraftWorkspaceScreen } from "@/app/billing/drafts/[draftId]/DraftWorkspaceScreen";
 
 const push = vi.fn();
+const back = vi.fn();
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push })
+  useRouter: () => ({ push, back })
 }));
 
 vi.mock("next/link", () => ({
@@ -47,6 +48,7 @@ describe("Phase 5 screens", () => {
     Object.defineProperty(globalThis, "crypto", { configurable: true, value: { randomUUID: () => "IDEM-UI" } });
     vi.restoreAllMocks();
     push.mockReset();
+    back.mockReset();
     localStorage.setItem("counteros_token", "TOKEN");
   });
 
@@ -100,6 +102,8 @@ describe("Phase 5 screens", () => {
     await waitFor(() => expect(screen.getByText("BILL-1")).toBeInTheDocument());
     render(<BillDetailScreen billId="1" />);
     await waitFor(() => expect(screen.getByText("RCPT-1")).toBeInTheDocument());
+    expect(screen.getByRole("link", { name: "View Receipt" })).toHaveAttribute("href", "/billing/bills/1/receipt");
+    expect(screen.getByRole("link", { name: "Print Receipt" })).toHaveAttribute("href", "/receipts/1/print");
     render(<ReceiptPreviewScreen billId="1" />);
     await waitFor(() => expect(screen.getByText("Development Organization")).toBeInTheDocument());
   });
