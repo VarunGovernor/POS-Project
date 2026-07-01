@@ -146,16 +146,18 @@ export function LiquorDashboard() {
   const api = { active, setActive, inventory, setInventory, selectedCustomer, setSelectedCustomer, saleType, setSaleType, ageStatus, setAgeStatus, dob, setDob, cart, setCart, payment, setPayment, drafts, setDrafts, receipts, setReceipts, printerJobs, setPrinterJobs, syncEvents, setSyncEvents, recovery, setRecovery, audit, setAudit, settings, setSettings, sessionClosed, setSessionClosed, addProduct, setQty, finalizeSale, printReceipt, notify, addAudit, logout, subtotal, tax, total };
 
   return (
-    <main>
-      <section className="shell panel">
+    <main className="liquor-main">
+      <section className="shell panel liquor-shell">
         <div className="header no-print">
           <div><span className="chip">Liquor Store POS</span><h1>Dashboard</h1><p>HamTech POS OS</p></div>
           <div className="actions"><button type="button" onClick={() => router.back()}>Back</button><button type="button" onClick={() => router.push("/")}>Switch POS</button><button type="button" onClick={logout}>Logout</button></div>
         </div>
         {toast ? <div className="toast">{toast}</div> : null}
-        <div className="split-grid">
-          <div className="no-print">
-            <div className="module-grid">{modules.map((name) => <button className={`module-card ${active === name ? "primary featured" : ""}`} key={name} type="button" onClick={name === "Logout" ? logout : () => setActive(name)}><span className="label">Module</span><span className="value">{name}</span></button>)}</div>
+        <div className="liquor-layout">
+          <aside className="module-menu no-print" aria-label="Liquor POS module menu">
+            {modules.map((name) => <button className={`module-menu-item ${active === name ? "active" : ""}`} aria-pressed={active === name} key={name} type="button" onClick={name === "Logout" ? logout : () => setActive(name)}><span>{name}</span><small>{moduleCount(name, api)}</small></button>)}
+          </aside>
+          <div className="active-panel no-print">
             <Panel api={api} />
           </div>
           <Receipt settings={settings} customer={selectedCustomer.name} ageStatus={ageStatus} cart={cart} subtotal={subtotal} tax={tax} total={total} payment={payment} receiptNumber={receiptNumber} printStatus={printStatus} printReceipt={printReceipt} />
@@ -163,6 +165,19 @@ export function LiquorDashboard() {
       </section>
     </main>
   );
+}
+
+function moduleCount(name: string, api: DashboardApi) {
+  if (name === "Product Lookup") return String(api.inventory.length);
+  if (name === "Draft Sales") return String(api.drafts.length);
+  if (name === "Bills / Receipts") return String(api.receipts.length);
+  if (name === "Printer") return String(api.printerJobs.filter((j) => j.status !== "Printed").length);
+  if (name === "Sync") return String(api.syncEvents.filter((e) => e.status !== "Completed").length);
+  if (name === "Recovery") return String(api.recovery.filter((m) => m.status === "Open").length);
+  if (name === "Audit") return String(api.audit.length);
+  if (name === "New Sale") return String(api.cart.length);
+  if (name === "Age Verification") return api.ageStatus === "ID Checked" ? "OK" : "Check";
+  return "";
 }
 
 function Panel({ api }: { api: DashboardApi }) {
@@ -187,14 +202,14 @@ function Panel({ api }: { api: DashboardApi }) {
 function CustomerPanel({ api }: { api: DashboardApi }) {
   const [query, setQuery] = useState("");
   const rows = customers.filter((c) => c.name.toLowerCase().includes(query.toLowerCase()) || c.type.toLowerCase().includes(query.toLowerCase()));
-  return <Block title="Customer / Counter Sale"><div className="status-grid"><label><span className="label">Search customer/context</span><input value={query} onChange={(e) => setQuery(e.target.value)} /></label><label><span className="label">Sale type</span><select value={api.saleType} onChange={(e) => api.setSaleType(e.target.value)}>{["Walk-in", "Loyalty", "Corporate", "Event", "Pickup"].map((x) => <option key={x}>{x}</option>)}</select></label><Metric label="Selected customer" value={api.selectedCustomer.name} /></div><Rows rows={rows.map((c) => [c.id, `${c.name} · ${c.type} · ${c.lastVisit}`, c.account])} /><div className="actions"><button onClick={() => { api.setSelectedCustomer(rows[0] ?? customers[0]); api.addAudit("customer selected"); api.notify("Customer selected"); }}>Select Customer</button><button className="secondary" onClick={() => { api.setSelectedCustomer(customers[0]); api.setActive("New Sale"); api.notify("Counter sale started"); }}>Start Counter Sale</button></div></Block>;
+  return <Block title="Customer / Counter Sale"><div className="status-grid"><label><span className="label">Search customer/context</span><input value={query} onChange={(e) => setQuery(e.target.value)} /></label><label><span className="label">Sale type</span><select value={api.saleType} onChange={(e) => api.setSaleType(e.target.value)}>{["Walk-in", "Loyalty", "Corporate", "Event", "Pickup"].map((x) => <option key={x}>{x}</option>)}</select></label><Metric label="Selected customer" value={api.selectedCustomer.name} /></div><div className="data-table"><div className="data-head"><span>Customer ID</span><span>Name</span><span>Type</span><span>Sale Type</span><span>Time</span><span>Action</span></div>{rows.map((c) => <div className="data-row" key={c.id}><span>{c.id}</span><strong>{c.name}</strong><span>{c.type}</span><span>{api.saleType}</span><span>{c.lastVisit}</span><button type="button" onClick={() => { api.setSelectedCustomer(c); api.addAudit("customer selected"); api.notify("Customer selected"); }}>Select</button></div>)}</div><div className="actions"><button onClick={() => { api.setSelectedCustomer(rows[0] ?? customers[0]); api.addAudit("customer selected"); api.notify("Customer selected"); }}>Select Customer</button><button className="secondary" onClick={() => { api.setSelectedCustomer(customers[0]); api.setActive("New Sale"); api.notify("Counter sale started"); }}>Start Counter Sale</button></div></Block>;
 }
 
 function ProductPanel({ api }: { api: DashboardApi }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const rows = api.inventory.filter((p) => (category === "All" || p.category === category) && `${p.sku} ${p.name}`.toLowerCase().includes(query.toLowerCase()));
-  return <Block title="Product Lookup"><div className="status-grid"><label><span className="label">Search products</span><input value={query} onChange={(e) => setQuery(e.target.value)} /></label><label><span className="label">Category filter</span><select value={category} onChange={(e) => setCategory(e.target.value)}>{categories.map((x) => <option key={x}>{x}</option>)}</select></label><Metric label="Products shown" value={String(rows.length)} /></div><Rows rows={rows.map((p) => [p.sku, `${p.name} · ${p.category} · ${p.size} · ${money(p.price)} · tax ${p.tax}%`, `${p.stockCount} · ${stockStatus(p)}`])} /><div className="actions"><button onClick={() => api.addProduct(rows[0] ?? api.inventory[0])}>Add to Sale</button><button className="secondary" onClick={() => api.notify(`${(rows[0] ?? api.inventory[0]).name} viewed`)}>View Product</button><button className="secondary" onClick={() => setCategory("Wine")}>Filter by Category</button></div></Block>;
+  return <Block title="Product Lookup"><div className="status-grid"><label><span className="label">Search products</span><input value={query} onChange={(e) => setQuery(e.target.value)} /></label><label><span className="label">Category filter</span><select value={category} onChange={(e) => setCategory(e.target.value)}>{categories.map((x) => <option key={x}>{x}</option>)}</select></label><Metric label="Products shown" value={String(rows.length)} /></div><div className="data-table products"><div className="data-head"><span>SKU</span><span>Name</span><span>Category</span><span>Size</span><span>Price</span><span>Stock</span><span>Status</span><span>Action</span></div>{rows.map((p) => <div className="data-row" key={p.sku}><span>{p.sku}</span><strong>{p.name}</strong><span>{p.category}</span><span>{p.size}</span><span>{money(p.price)}</span><span>{p.stockCount}</span><span className="mini-chip">{stockStatus(p)}</span><button type="button" onClick={() => api.addProduct(p)}>Add</button></div>)}</div><div className="actions"><button onClick={() => api.addProduct(rows[0] ?? api.inventory[0])}>Add to Sale</button><button className="secondary" onClick={() => api.notify(`${(rows[0] ?? api.inventory[0]).name} viewed`)}>View Product</button><button className="secondary" onClick={() => setCategory("Wine")}>Filter by Category</button></div></Block>;
 }
 
 function StockPanel({ api }: { api: DashboardApi }) {
@@ -226,11 +241,11 @@ function CloseSession({ api }: { api: DashboardApi }) {
 }
 
 function Receipt({ settings, customer, ageStatus, cart, subtotal, tax, total, payment, receiptNumber, printStatus, printReceipt }: { settings: Settings; customer: string; ageStatus: string; cart: CartItem[]; subtotal: number; tax: number; total: number; payment: string; receiptNumber: string; printStatus: string; printReceipt: () => void }) {
-  return <aside className="receipt-paper"><header><h1>{settings.header}</h1><p>{settings.store}</p><p>Liquor Store POS</p><p>Receipt Preview</p></header><div className="receipt-lines"><div className="receipt-line"><span>Receipt</span><strong>{receiptNumber}</strong></div><div className="receipt-line"><span>Cashier / Counter</span><strong>Cashier / {settings.counter}</strong></div><div className="receipt-line"><span>Customer</span><strong>{customer}</strong></div><div className="receipt-line"><span>Age verification</span><strong>{ageStatus}</strong></div></div>{cart.length ? cart.map((item) => <div className="receipt-item" key={item.sku}><span>{item.name}</span><span>{item.qty} x {item.size}</span><strong>{money(item.price * item.qty)}</strong></div>) : <p>No sale items added.</p>}<div className="receipt-lines totals"><div className="receipt-line"><span>Subtotal</span><strong>{money(subtotal)}</strong></div><div className="receipt-line"><span>Tax</span><strong>{money(tax)}</strong></div><div className="receipt-line"><span>Total</span><strong>{money(total)}</strong></div><div className="receipt-line"><span>Payment method</span><strong>{payment}</strong></div><div className="receipt-line"><span>Payment status</span><strong>{receiptNumber === "Draft Sale" ? "Awaiting finalization" : "Paid"}</strong></div><div className="receipt-line"><span>Print status</span><strong>{printStatus}</strong></div></div><footer><p>{settings.footer}</p><div className="actions no-print"><button type="button" onClick={() => printReceipt()}>Print Receipt</button><button className="secondary" type="button" onClick={() => printReceipt()}>Save as PDF</button></div></footer></aside>;
+  return <aside className="receipt-paper liquor-receipt"><header><h1>{settings.header}</h1><p>{settings.store}</p><p>Liquor Store POS</p><p>Receipt Preview</p></header><div className="receipt-lines"><div className="receipt-line"><span>Receipt</span><strong>{receiptNumber}</strong></div><div className="receipt-line"><span>Cashier / Counter</span><strong>Cashier / {settings.counter}</strong></div><div className="receipt-line"><span>Customer</span><strong>{customer}</strong></div><div className="receipt-line"><span>Age verification</span><strong>{ageStatus}</strong></div></div>{cart.length ? cart.map((item) => <div className="receipt-item" key={item.sku}><span>{item.name}</span><span>{item.qty} x {item.size}</span><strong>{money(item.price * item.qty)}</strong></div>) : <p>No sale items added.</p>}<div className="receipt-lines totals"><div className="receipt-line"><span>Subtotal</span><strong>{money(subtotal)}</strong></div><div className="receipt-line"><span>Tax</span><strong>{money(tax)}</strong></div><div className="receipt-line"><span>Total</span><strong>{money(total)}</strong></div><div className="receipt-line"><span>Payment method</span><strong>{payment}</strong></div><div className="receipt-line"><span>Payment status</span><strong>{receiptNumber === "Draft Sale" ? "Awaiting finalization" : "Paid"}</strong></div><div className="receipt-line"><span>Print status</span><strong>{printStatus}</strong></div></div><footer><p>{settings.footer}</p><div className="actions no-print"><button type="button" onClick={() => printReceipt()}>Print Receipt</button><button className="secondary" type="button" onClick={() => printReceipt()}>Save as PDF</button></div></footer></aside>;
 }
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
-  return <section className="status-item" style={{ marginTop: 16, overflowX: "auto" }}><h2>{title}</h2>{children}</section>;
+  return <section className="module-panel"><h2>{title}</h2><p>Active {title} workspace</p><div className="panel-scroll">{children}</div></section>;
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

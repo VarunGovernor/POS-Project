@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -149,6 +149,10 @@ describe("Phase 2 screens", () => {
   test("liquor dashboard renders modules and sale receipt flow", async () => {
     const print = vi.spyOn(window, "print").mockImplementation(() => undefined);
     render(<LiquorDashboard />);
+    const menu = screen.getByLabelText("Liquor POS module menu");
+    expect(menu).toBeInTheDocument();
+    expect(within(menu).getByRole("button", { name: /Age Verification/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("heading", { name: "Age Verification" })).toBeInTheDocument();
 
     [
       "Age Verification",
@@ -170,10 +174,13 @@ describe("Phase 2 screens", () => {
     ].forEach((name) => expect(screen.getAllByRole("button", { name: new RegExp(name) }).length).toBeGreaterThan(0));
 
     await userEvent.click(screen.getByRole("button", { name: /Product Lookup/ }));
+    expect(within(menu).getByRole("button", { name: /Product Lookup/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("heading", { name: "Age Verification" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Product Lookup" })).toBeInTheDocument();
     expect(screen.getByText(/Blended Whisky 750 ml/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Add to Sale" }));
     expect(screen.getByText("Product added to sale")).toBeInTheDocument();
-    expect(screen.getByText("Lager 330 ml")).toBeInTheDocument();
+    expect(screen.getAllByText("Lager 330 ml").length).toBeGreaterThan(0);
 
     await userEvent.click(screen.getByRole("button", { name: /New Sale/ }));
     await userEvent.click(screen.getByRole("button", { name: "Finalize Sale" }));
@@ -206,6 +213,7 @@ describe("Phase 2 screens", () => {
     await userEvent.click(screen.getByRole("button", { name: /Reports/ }));
     expect(screen.getByText("Category sales")).toBeInTheDocument();
     expect(screen.getByText("Beer")).toBeInTheDocument();
+    expect(screen.getByText("Receipt Preview")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Print Receipt" }));
     expect(print).toHaveBeenCalled();
