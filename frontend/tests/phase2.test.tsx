@@ -169,16 +169,47 @@ describe("Phase 2 screens", () => {
       "Logout"
     ].forEach((name) => expect(screen.getAllByRole("button", { name: new RegExp(name) }).length).toBeGreaterThan(0));
 
-    const firstTotal = screen.getByText("₹142").textContent;
+    await userEvent.click(screen.getByRole("button", { name: /Product Lookup/ }));
+    expect(screen.getByText(/Blended Whisky 750 ml/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Add to Sale" }));
+    expect(screen.getByText("Product added to sale")).toBeInTheDocument();
+    expect(screen.getByText("Lager 330 ml")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /New Sale/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Finalize Sale" }));
+    expect(screen.getByText("Sale blocked until valid age verification")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /Age Verification/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Mark ID Checked" }));
+    expect(screen.getByText("Age verification completed")).toBeInTheDocument();
+
     await userEvent.click(screen.getByRole("button", { name: /New Sale/ }));
     await userEvent.click(screen.getByRole("button", { name: /Pilsner 500 ml/ }));
     await userEvent.click(screen.getByRole("button", { name: "Finalize Sale" }));
-    expect(screen.getByText("₹330")).not.toHaveTextContent(firstTotal ?? "");
+    expect(screen.getByText("Sale finalized")).toBeInTheDocument();
+    expect(screen.getByText(/LR-/)).toBeInTheDocument();
     expect(screen.getByText("Receipt Preview")).toBeInTheDocument();
     expect(screen.getByText("Paid")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /Bills \/ Receipts/ }));
+    expect(screen.getByText(/LR-2401/)).toBeInTheDocument();
+    expect(screen.getByText(/LR-2410/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /Sync/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Retry All" }));
+    expect(screen.getByText("Sync queue updated")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /Recovery/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Run Recovery Scan" }));
+    expect(screen.getByText("Recovery scan completed")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /Reports/ }));
+    expect(screen.getByText("Category sales")).toBeInTheDocument();
+    expect(screen.getByText("Beer")).toBeInTheDocument();
+
     await userEvent.click(screen.getByRole("button", { name: "Print Receipt" }));
     expect(print).toHaveBeenCalled();
-    expect(screen.getByText("Receipt Printed")).toBeInTheDocument();
+    expect(screen.getAllByText("Receipt Printed").length).toBeGreaterThan(0);
   });
 
   test("liquor logout returns to POS selector", async () => {
