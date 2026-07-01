@@ -6,11 +6,13 @@ import { DashboardScreen } from "@/app/dashboard/DashboardScreen";
 import { LoginScreen } from "@/app/login/LoginScreen";
 import { CloseSessionScreen } from "@/app/session/close/CloseSessionScreen";
 import { OpenSessionScreen } from "@/app/session/open/OpenSessionScreen";
+import { LiquorDashboard } from "@/app/liquor/dashboard/LiquorDashboard";
 
 const push = vi.fn();
+const back = vi.fn();
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push })
+  useRouter: () => ({ push, back })
 }));
 
 vi.mock("next/link", () => ({
@@ -81,21 +83,33 @@ describe("Phase 2 screens", () => {
     });
     vi.restoreAllMocks();
     push.mockReset();
+    back.mockReset();
     localStorage.clear();
   });
 
-  test("login screen renders", () => {
+  test("login without POS context asks for POS selection", () => {
     render(<LoginScreen />);
-    expect(screen.getByRole("heading", { name: "Login" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Select a POS system before login." })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Select POS System" })).toBeInTheDocument();
+  });
+
+  test("hospital login screen renders", () => {
+    render(<LoginScreen selectedPos="hospital" />);
+    expect(screen.getByRole("heading", { name: "Hospital POS Login" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Login" })).toBeInTheDocument();
   });
 
-  test("login calls API successfully", async () => {
+  test("liquor login screen renders", () => {
+    render(<LoginScreen selectedPos="liquor" />);
+    expect(screen.getByRole("heading", { name: "Liquor Store POS Login" })).toBeInTheDocument();
+  });
+
+  test("hospital login calls API successfully", async () => {
     const fetchMock = vi.spyOn(global, "fetch").mockImplementation(() =>
       ok({ session_token: "TOKEN", user, offline_login: false, expires_at: "2026-01-01T12:00:00Z" })
     );
 
-    render(<LoginScreen />);
+    render(<LoginScreen selectedPos="hospital" />);
     await userEvent.type(screen.getByLabelText("Password"), "cashier123");
     await userEvent.click(screen.getByRole("button", { name: "Login" }));
 
@@ -105,6 +119,14 @@ describe("Phase 2 screens", () => {
       "http://127.0.0.1:8000/api/v1/auth/login",
       expect.objectContaining({ method: "POST" })
     );
+  });
+
+  test("liquor login routes to liquor dashboard", async () => {
+    render(<LoginScreen selectedPos="liquor" />);
+    await userEvent.type(screen.getByLabelText("Password"), "cashier123");
+    await userEvent.click(screen.getByRole("button", { name: "Login" }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/liquor/dashboard"));
   });
 
   test("dashboard renders current user device and session", async () => {
@@ -122,6 +144,47 @@ describe("Phase 2 screens", () => {
     expect(screen.getByText("POS Terminal")).toBeInTheDocument();
     expect(screen.getByText("open")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Close Session" })).toHaveAttribute("href", "/session/close");
+  });
+
+  test("liquor dashboard renders modules and sale receipt flow", async () => {
+    const print = vi.spyOn(window, "print").mockImplementation(() => undefined);
+    render(<LiquorDashboard />);
+
+    [
+      "Age Verification",
+      "Customer / Counter Sale",
+      "Product Lookup",
+      "Stock Check",
+      "New Sale",
+      "Draft Sales",
+      "Bills / Receipts",
+      "Printer",
+      "Sync",
+      "Recovery",
+      "Reports",
+      "Settings",
+      "Support",
+      "Audit",
+      "Close Session",
+      "Logout"
+    ].forEach((name) => expect(screen.getAllByRole("button", { name: new RegExp(name) }).length).toBeGreaterThan(0));
+
+    const firstTotal = screen.getByText("₹142").textContent;
+    await userEvent.click(screen.getByRole("button", { name: /New Sale/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Pilsner 500 ml/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Finalize Sale" }));
+    expect(screen.getByText("₹330")).not.toHaveTextContent(firstTotal ?? "");
+    expect(screen.getByText("Receipt Preview")).toBeInTheDocument();
+    expect(screen.getByText("Paid")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Print Receipt" }));
+    expect(print).toHaveBeenCalled();
+    expect(screen.getByText("Receipt Printed")).toBeInTheDocument();
+  });
+
+  test("liquor logout returns to POS selector", async () => {
+    render(<LiquorDashboard />);
+    await userEvent.click(screen.getAllByRole("button", { name: /Logout/ })[0]);
+    expect(push).toHaveBeenCalledWith("/");
   });
 
   test("open session screen renders", () => {

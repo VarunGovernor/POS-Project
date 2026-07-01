@@ -43,7 +43,7 @@ export function DashboardScreen() {
   async function logout() {
     await localApi.logout(token());
     localStorage.removeItem("counteros_token");
-    router.push("/login");
+    router.push("/");
   }
 
   useEffect(() => {
@@ -68,6 +68,7 @@ export function DashboardScreen() {
           </div>
           <div className="actions">
             <button type="button" onClick={load}>Refresh</button>
+            <button type="button" onClick={() => router.push("/")}>Switch POS</button>
             <button type="button" onClick={logout}>Logout</button>
           </div>
         </div>

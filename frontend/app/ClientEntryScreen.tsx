@@ -4,24 +4,32 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 const verticals = [
-  "Hospital POS",
-  "Restaurant POS",
-  "Gas Station POS",
-  "Retail POS",
-  "Pharmacy POS",
-  "Laboratory POS",
-  "Parking POS",
-  "Ticketing POS",
-  "School / College Fee Counter",
-  "Service Billing POS"
+  {
+    name: "Hospital POS",
+    pos: "hospital",
+    description: "Hospital registration, OP/IP/Emergency billing, pharmacy walk-in, receipts, printer, sync, recovery, and reports."
+  },
+  {
+    name: "Liquor Store POS",
+    pos: "liquor",
+    description: "Age-controlled counter sales, product lookup, stock checks, billing, and receipt workflow."
+  },
+  { name: "Restaurant POS" },
+  { name: "Gas Station POS" },
+  { name: "Retail POS" },
+  { name: "Laboratory POS" },
+  { name: "Parking POS" },
+  { name: "Ticketing POS" },
+  { name: "School / College Fee Counter" },
+  { name: "Service Billing POS" }
 ];
 
 export function ClientEntryScreen() {
   const router = useRouter();
   const [toast, setToast] = useState("");
 
-  function open(name: string) {
-    if (name === "Hospital POS") router.push("/login");
+  function open(item: (typeof verticals)[number]) {
+    if (item.pos) router.push(`/login?pos=${item.pos}`);
     else setToast("This POS vertical is planned for a future rollout.");
   }
 
@@ -37,13 +45,13 @@ export function ClientEntryScreen() {
         </div>
         {toast ? <div className="toast">{toast}</div> : null}
         <div className="module-grid">
-          {verticals.map((name) => {
-            const ready = name === "Hospital POS";
+          {verticals.map((item) => {
+            const ready = Boolean(item.pos);
             return (
-              <button className={`module-card ${ready ? "primary featured" : "future"}`} key={name} type="button" onClick={() => open(name)}>
+              <button className={`module-card ${ready ? "primary featured" : "future"}`} key={item.name} type="button" onClick={() => open(item)}>
                 <span className="label">{ready ? "Ready" : "Coming Soon"}</span>
-                <span className="value">{name}</span>
-                <p>{ready ? "Hospital registration, billing, receipts, printer, sync, recovery, and reports." : "Planned for a future rollout."}</p>
+                <span className="value">{item.name}</span>
+                <p>{item.description ?? "Planned for a future rollout."}</p>
               </button>
             );
           })}
